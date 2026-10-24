@@ -171,9 +171,80 @@ export class World3D {
   }
 
   private buildCourt(): void {
-    const sand = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), new THREE.MeshLambertMaterial({ color: 0xe6c98f }));
-    sand.rotation.x = -Math.PI / 2;
-    this.scene.add(sand);
+    const video = document.createElement('video');
+    video.src = '/wateranim1.mp4';
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    void video.play().catch(() => {
+      window.addEventListener('pointerdown', () => void video.play(), {
+        once: true,
+      });
+    });
+
+    const waterTexture = new THREE.VideoTexture(video);
+    waterTexture.colorSpace = THREE.SRGBColorSpace;
+    waterTexture.wrapS = waterTexture.wrapT = THREE.RepeatWrapping;
+    waterTexture.repeat.set(60, 60);
+
+    const water = new THREE.Mesh(
+      new THREE.PlaneGeometry(220, 220),
+      new THREE.MeshBasicMaterial({
+        map: waterTexture,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+      }),
+    );
+    water.rotation.x = -Math.PI / 2;
+    this.scene.add(water);
+
+    // A broad sand shelf fades out so the moving water shows through at the shore.
+    const sandMargin = 2.5;
+    const shoreFade = 3;
+    const islandHalfW = COURT.halfW + sandMargin;
+    const islandHalfLen = COURT.halfLen + sandMargin;
+    const islandW = (islandHalfW + shoreFade + 0.5) * 2;
+    const islandLen = (islandHalfLen + shoreFade + 0.5) * 2;
+    const islandTexture = canvasTex(512, 512, (ctx) => {
+      const pixels = ctx.createImageData(512, 512);
+      for (let y = 0; y < 512; y++) {
+        for (let x = 0; x < 512; x++) {
+          const wx = ((x + 0.5) / 512 - 0.5) * islandW;
+          const wz = ((y + 0.5) / 512 - 0.5) * islandLen;
+          // Rounded rectangle keeps sand around all four corners of the court.
+          const radius = 2;
+          const dx = Math.abs(wx) - (islandHalfW - radius);
+          const dz = Math.abs(wz) - (islandHalfLen - radius);
+          const distance = Math.hypot(Math.max(dx, 0), Math.max(dz, 0))
+            + Math.min(Math.max(dx, dz), 0) - radius;
+          const ripple = 0.18 * Math.sin(wx * 2.1 + wz * 0.8)
+            + 0.12 * Math.sin(wz * 2.8 - wx * 0.6);
+          const fade = THREE.MathUtils.clamp((distance + ripple) / shoreFade, 0, 1);
+          const opacity = 1 - fade * fade * (3 - 2 * fade);
+          const wet = THREE.MathUtils.smoothstep(distance + ripple, -0.8, shoreFade);
+          const grain = 2 * Math.sin(x * 12.9898 + y * 78.233);
+          const i = (y * 512 + x) * 4;
+          pixels.data[i] = 240 - wet * 55 + grain;
+          pixels.data[i + 1] = 216 - wet * 40 + grain;
+          pixels.data[i + 2] = 162 - wet * 20 + grain;
+          pixels.data[i + 3] = Math.round(opacity * 255);
+        }
+      }
+      ctx.putImageData(pixels, 0, 0);
+    });
+    const island = new THREE.Mesh(
+      new THREE.PlaneGeometry(islandW, islandLen),
+      new THREE.MeshLambertMaterial({
+        map: islandTexture,
+        transparent: true,
+        depthWrite: false,
+      }),
+    );
+    island.rotation.x = -Math.PI / 2;
+    island.position.y = 0.002;
+    this.scene.add(island);
 
     const court = new THREE.Mesh(
       new THREE.PlaneGeometry(COURT.halfW * 2, COURT.halfLen * 2),
