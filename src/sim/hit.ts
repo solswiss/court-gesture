@@ -21,10 +21,10 @@ export interface HitSpec {
 }
 
 export const HIT_SPECS: Record<HitType, HitSpec> = {
-  bump: { forward: 0.45, height: 0.9, reach: 1.5, sweet: 0.6, tMin: 1.0, tMax: 1.5, tCap: 2.2 },
-  set: { forward: 0.2, height: 2.2, reach: 1.3, sweet: 0.5, tMin: 0.85, tMax: 1.25, tCap: 1.8 },
-  spike: { forward: 0.3, height: 2.5, reach: 1.5, sweet: 0.6, tMin: 0.35, tMax: 0.65, tCap: 1.0 },
-  serve: { forward: 0.3, height: 2.5, reach: 1.4, sweet: 0.55, tMin: 0.8, tMax: 1.4, tCap: 1.9 },
+  bump: { forward: 0.45, height: 1.5, reach: 2, sweet: 2, tMin: 1.0, tMax: 1.5, tCap: 2.2 },
+  set: { forward: 0.2, height: 3, reach: 2, sweet: 2, tMin: 0.85, tMax: 1.25, tCap: 1.8 },
+  spike: { forward: 0.3, height: 3, reach: 2, sweet: 2, tMin: 0.35, tMax: 0.65, tCap: 1.0 },
+  serve: { forward: 0.3, height: 3, reach: 2, sweet: 2, tMin: 0.8, tMax: 1.4, tCap: 1.9 },
 };
 
 export interface Actor {

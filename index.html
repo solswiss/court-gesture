@@ -17,6 +17,11 @@
       .hud-hit.q3 { color: #ffee55; } .hud-hit.q2 { color: #fff; } .hud-hit.q1 { color: #ffc27a; } .hud-hit.q0 { color: #ff7766; }
       .hud-debug { position: absolute; top: 80px; left: 12px; font: 12px/1.4 ui-monospace, monospace; background: rgba(0,0,0,.45); padding: 6px 8px; border-radius: 6px; }
       .hud-help { position: absolute; left: 12px; bottom: 10px; font-size: 12px; line-height: 1.6; opacity: .92; background: rgba(0,0,0,.28); padding: 6px 10px; border-radius: 8px; }
+      .hand-panel { position: absolute; z-index: 5; right: 12px; bottom: 12px; width: min(270px, 42vw); box-sizing: border-box; padding: 12px; border-radius: 12px; background: rgba(12,25,40,.88); color: white; font-size: 13px; display: grid; gap: 8px; }
+      .hand-panel video { width: 100%; max-height: 150px; object-fit: cover; transform: scaleX(-1); border-radius: 6px; background: #152131; }
+      .hand-panel button { padding: 8px; cursor: pointer; border: 0; border-radius: 6px; }
+      .hand-panel small { line-height: 1.4; color: #cbdce7; }
+      .hud-help { max-width: calc(58vw - 48px); }
     </style>
   </head>
   <body>

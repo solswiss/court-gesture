@@ -1,6 +1,6 @@
 import { SIM_DT } from './config';
 import { CpuController, type CpuSkillName } from './input/cpu';
-import { HumanController } from './input/keyboard';
+import { HandController } from './input/hand';
 import { makeRng } from './rng';
 import { Game, type Controller } from './sim/game';
 import { Hud } from './view/hud';
@@ -12,11 +12,11 @@ const skillParam = params.get('skill');
 const skill: CpuSkillName = skillParam === 'easy' || skillParam === 'hard' ? skillParam : 'normal';
 const seed = Number(params.get('seed') ?? Date.now() % 100000) || 1;
 
-const near: Controller = params.has('demo') ? new CpuController(skill, makeRng(seed + 1)) : new HumanController();
+const app = document.getElementById('app')!;
+const near: Controller = params.has('demo') ? new CpuController(skill, makeRng(seed + 1)) : new HandController(app);
 const far: Controller = new CpuController(skill, makeRng(seed + 2));
 const game = new Game([near, far], seed);
 
-const app = document.getElementById('app')!;
 const world = new World3D(app, game);
 const hud = new Hud(app);
 

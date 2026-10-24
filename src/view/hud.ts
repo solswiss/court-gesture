@@ -29,7 +29,7 @@ export class Hud {
     this.dbg = el('hud-debug', root);
     this.help = el('hud-help', root);
     this.help.innerHTML = [
-      '<b>Move</b> WASD &nbsp; <b>Jump</b> Space &nbsp; <b>Aim</b> mouse (or arrow keys) &nbsp; <b>Power</b> hold Shift',
+      'Enable camera for hand movement + gestures. Keyboard when camera is off.<br><b>Move</b> WASD &nbsp; <b>Jump</b> Space &nbsp; <b>Aim</b> mouse (or arrow keys) &nbsp; <b>Power</b> hold Shift',
       '<b>Bump</b> Q &nbsp; <b>Set</b> E &nbsp; <b>Spike</b> F &nbsp; <b>Serve</b> X (toss, then X again to hit)',
       '<b>Debug</b> ` &nbsp; <b>Restart</b> Enter (after game over)',
     ].join('<br>');
@@ -77,9 +77,9 @@ export class Hud {
   private statusText(g: Game): string {
     switch (g.phase) {
       case 'ready':
-        return g.server.id === 0 ? 'Your serve — press X to toss, X again to hit' : 'CPU serving…';
+        return g.server.id === 0 ? 'Your serve — thumbs up or X to toss; palm, then thumbs up to hit' : 'CPU serving…';
       case 'toss':
-        return g.server.id === 0 ? 'Press X to hit the serve' : '';
+        return g.server.id === 0 ? 'Open palm, then thumbs up to serve (or X)' : '';
       case 'point': {
         const who = g.lastPointWinner === 1 ? 'You score' : 'CPU scores';
         return `${who} — ${g.message}`;

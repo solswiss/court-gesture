@@ -37,7 +37,7 @@ export const RULES = {
   cap: 15, // hard cap if the game goes long (win by 2 until here)
   maxTouches: 3,
   pointDelay: 1.8,
-  actionWindow: 0.18, // how long a pressed action stays "armed" waiting for the ball
+  actionWindow: 0.35, // how long a pressed action stays "armed" waiting for the ball
   touchCooldown: 0.3, // min time between touches by the same player
   tossV: 6.3, // serve toss launch speed
   netMargin: 0.12, // min clearance over the tape for a hit (scaled up by quality)
