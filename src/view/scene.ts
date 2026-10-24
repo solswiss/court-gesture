@@ -83,6 +83,8 @@ export class World3D {
   private ball: THREE.Mesh;
   private ballShadow = blobShadow();
   private net: THREE.Group;
+  private netMaterials: THREE.Material[] = [];
+  private netOpacity = 1;
   private netShake = 0;
   private reticle: THREE.Mesh;
   private reticleMat: THREE.MeshBasicMaterial;
@@ -209,6 +211,9 @@ export class World3D {
     );
     mesh.position.y = NET.top - 0.5;
     const tape = new THREE.Mesh(new THREE.BoxGeometry(w, 0.09, 0.04), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+    tape.material.transparent = true;
+    tape.material.depthWrite = false;
+    this.netMaterials.push(mesh.material, tape.material);
     tape.position.y = NET.top - 0.045;
     g.add(mesh, tape);
     for (const sx of [-1, 1]) {
@@ -282,6 +287,12 @@ export class World3D {
     // camera: fixed behind the near baseline, drifts a little toward the ball
     this.camera.position.set(b.pos.x * 0.12, 9.5, 17.5);
     this.camera.lookAt(b.pos.x * 0.05, 0.6, -1);
+
+    // Fade the mesh and tape while the ball is on the human player's side.
+    const ballOnYourSide = b.pos.z * human.side >= 0;
+    const targetOpacity = ballOnYourSide ? 0.18 : 1;
+    this.netOpacity = THREE.MathUtils.damp(this.netOpacity, targetOpacity, 12, dt);
+    for (const material of this.netMaterials) material.opacity = this.netOpacity;
 
     // debug overlay
     this.debugGroup.visible = this.debug;
