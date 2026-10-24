@@ -80,7 +80,7 @@ export class World3D {
   debug = false;
 
   private views: PlayerView[];
-  private ball: THREE.Mesh;
+  private ball: THREE.Sprite;
   private ballShadow = blobShadow();
   private net: THREE.Group;
   private netMaterials: THREE.Material[] = [];
@@ -120,17 +120,19 @@ export class World3D {
     this.views = game.players.map((p) => new PlayerView(p, p.side === 1 ? 0x2f6fdb : 0xe0453a));
     for (const v of this.views) this.scene.add(v.group, v.shadow);
 
-    // ball
-    const bt = canvasTex(256, 128, (g) => {
-      g.fillStyle = '#fdfdfd';
-      g.fillRect(0, 0, 256, 128);
-      const cols = ['#2b6cff', '#ffd23f', '#2b6cff', '#ffd23f'];
-      cols.forEach((c, i) => {
-        g.fillStyle = c;
-        g.fillRect(i * 64 + 22, 0, 22, 128);
-      });
+    // Camera-facing artwork; the simulation still uses BALL.radius for collisions.
+    const diameter = BALL.radius * 2 * 1.25; // Visual size only; hitbox stays unchanged.
+    const bt = new THREE.TextureLoader().load('/ball.svg', (texture) => {
+      const aspect = texture.image.width / texture.image.height;
+      this.ball.scale.set(
+        diameter * Math.min(aspect, 1),
+        diameter / Math.max(aspect, 1),
+        1,
+      );
     });
-    this.ball = new THREE.Mesh(new THREE.SphereGeometry(BALL.radius, 20, 14), new THREE.MeshLambertMaterial({ map: bt }));
+    bt.colorSpace = THREE.SRGBColorSpace;
+    this.ball = new THREE.Sprite(new THREE.SpriteMaterial({ map: bt, transparent: true, depthWrite: false }));
+    this.ball.scale.set(diameter, diameter, 1);
     this.scene.add(this.ball, this.ballShadow);
 
     // aim reticle on the ground
@@ -254,8 +256,6 @@ export class World3D {
     // ball
     const b = g.ball;
     this.ball.position.set(b.pos.x, b.pos.y, b.pos.z);
-    this.ball.rotation.z -= (b.vel.x / BALL.radius) * dt;
-    this.ball.rotation.x += (b.vel.z / BALL.radius) * dt;
     this.ballShadow.position.set(b.pos.x, 0.02, b.pos.z);
     const sh = 0.7 / (1 + Math.max(0, b.pos.y - BALL.radius) * 0.18);
     this.ballShadow.scale.set(sh, sh, 1);
