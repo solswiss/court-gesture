@@ -108,6 +108,7 @@ export class World3D {
   private views: PlayerView[];
   private ball: THREE.Sprite;
   private ballShadow = blobShadow();
+  private waterFallback?: THREE.CanvasTexture;
   private net: THREE.Group;
   private netMaterials: THREE.Material[] = [];
   private netOpacity = 1;
@@ -139,8 +140,30 @@ export class World3D {
     this.scene.add(sun);
 
     this.buildCourt();
+    // Sandcastle just outside the left net post, with its original image proportions.
+    const castles: THREE.Sprite[] = [];
+    const castleWidth = 3;
+    const castleTexture = new THREE.TextureLoader().load('/sand-castle.png', (texture) => {
+      const height = castleWidth * texture.image.height / texture.image.width;
+      for (const castle of castles) castle.scale.set(castleWidth, height, 1);
+    });
+    castleTexture.colorSpace = THREE.SRGBColorSpace;
+    const castleMaterial = new THREE.SpriteMaterial({
+      map: castleTexture,
+      transparent: true,
+      depthWrite: false,
+    });
+    {
+      const castle = new THREE.Sprite(castleMaterial);
+      castle.center.set(0.5, 0);
+      castle.position.set(-(NET.halfW + 1.8), 0.02, 0.5);
+      castle.scale.set(castleWidth, castleWidth, 1);
+      castle.renderOrder = 1; // Draw after the transparent sand shelf and water.
+      castles.push(castle);
+      this.scene.add(castle);
+    }
     this.net = this.buildNet();
-    this.scene.add(this.net);
+    this.scene.add(this.net); 
 
     // players
     this.views = game.players.map((p) => new PlayerView(p, p.side === 1 ? 0xfa5a50 : 0x3fbfff));
@@ -197,9 +220,114 @@ export class World3D {
   }
 
   private buildCourt(): void {
-    const sand = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), new THREE.MeshLambertMaterial({ color: 0xe6c98f }));
-    sand.rotation.x = -Math.PI / 2;
-    this.scene.add(sand);
+    // Keep water visible even when the browser cannot decode or autoplay the MP4.
+    const fallback = canvasTex(128, 128, (ctx) => {
+      const pixels = ctx.createImageData(128, 128);
+      for (let y = 0; y < 128; y++) {
+        for (let x = 0; x < 128; x++) {
+          const u = x / 128 * Math.PI * 2;
+          const v = y / 128 * Math.PI * 2;
+          const wave = Math.sin(u * 3 + Math.sin(v * 2))
+            * Math.cos(v * 3 + Math.sin(u * 2));
+          const foam = Math.pow(Math.max(0, wave), 8);
+          const i = (y * 128 + x) * 4;
+          pixels.data[i] = 25 + wave * 10 + foam * 95;
+          pixels.data[i + 1] = 145 + wave * 20 + foam * 65;
+          pixels.data[i + 2] = 185 + wave * 20 + foam * 45;
+          pixels.data[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(pixels, 0, 0);
+    });
+    fallback.wrapS = fallback.wrapT = THREE.RepeatWrapping;
+    fallback.repeat.set(60, 60);
+    this.waterFallback = fallback;
+    const waterMaterial = new THREE.MeshBasicMaterial({
+      map: fallback,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+    });
+
+    const video = document.createElement('video');
+    video.muted = true;
+    video.defaultMuted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.preload = 'auto';
+
+    const waterTexture = new THREE.VideoTexture(video);
+    waterTexture.colorSpace = THREE.SRGBColorSpace;
+    waterTexture.wrapS = waterTexture.wrapT = THREE.RepeatWrapping;
+    waterTexture.repeat.set(60, 60);
+    video.addEventListener('playing', () => {
+      waterMaterial.map = waterTexture;
+      waterMaterial.needsUpdate = true;
+    });
+    video.addEventListener('error', () => {
+      waterMaterial.map = fallback;
+      waterMaterial.needsUpdate = true;
+      console.warn('Water video could not be decoded; using animated water fallback.', video.error);
+    });
+    const tryPlay = () => {
+      if (video.paused && !video.error) void video.play().catch(() => {
+        // The animated fallback remains visible until playback is allowed.
+      });
+    };
+    window.addEventListener('pointerdown', tryPlay);
+    window.addEventListener('keydown', tryPlay);
+    video.src = '/wateranim1.mp4';
+    video.load();
+    tryPlay();
+
+    const sandMargin = 2.5;
+    const shorelineZ = -COURT.halfLen - sandMargin;
+    const water = new THREE.Mesh(
+      new THREE.PlaneGeometry(220, 220),
+      waterMaterial,
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.z = shorelineZ - 110; // The near edge stays behind the far baseline.
+    this.scene.add(water);
+
+    // A wide beach fades into water only beyond the far side of the court.
+    const shoreFade = 3;
+    const islandW = 220;
+    const islandLen = 220;
+    const islandTexture = canvasTex(512, 512, (ctx) => {
+      const pixels = ctx.createImageData(512, 512);
+      for (let y = 0; y < 512; y++) {
+        for (let x = 0; x < 512; x++) {
+          const wx = ((x + 0.5) / 512 - 0.5) * islandW;
+          const wz = ((y + 0.5) / 512 - 0.5) * islandLen;
+          const distance = shorelineZ - wz;
+          const ripple = 0.18 * Math.sin(wx * 2.1 + wz * 0.8)
+            + 0.12 * Math.sin(wz * 2.8 - wx * 0.6);
+          const fade = THREE.MathUtils.clamp((distance + ripple) / shoreFade, 0, 1);
+          const opacity = 1 - fade * fade * (3 - 2 * fade);
+          const wet = THREE.MathUtils.smoothstep(distance + ripple, -0.8, shoreFade);
+          const grain = 2 * Math.sin(x * 12.9898 + y * 78.233);
+          const i = (y * 512 + x) * 4;
+          pixels.data[i] = 240 - wet * 55 + grain;
+          pixels.data[i + 1] = 216 - wet * 40 + grain;
+          pixels.data[i + 2] = 162 - wet * 20 + grain;
+          pixels.data[i + 3] = Math.round(opacity * 255);
+        }
+      }
+      ctx.putImageData(pixels, 0, 0);
+    });
+    const island = new THREE.Mesh(
+      new THREE.PlaneGeometry(islandW, islandLen),
+      new THREE.MeshLambertMaterial({
+        map: islandTexture,
+        transparent: true,
+        depthWrite: false,
+      }),
+    );
+    island.rotation.x = -Math.PI / 2;
+    island.position.y = 0.002;
+    this.scene.add(island);
 
     const court = new THREE.Mesh(
       new THREE.PlaneGeometry(COURT.halfW * 2, COURT.halfLen * 2),
@@ -274,6 +402,7 @@ export class World3D {
   }
 
   update(dt: number, t: number): void {
+    this.waterFallback?.offset.set(t * 0.015, Math.sin(t * 0.2) * 0.025);
     const g = this.game;
     const human = g.players[0];
 
