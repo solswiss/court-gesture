@@ -35,6 +35,61 @@ function blobShadow(): THREE.Mesh {
   return m;
 }
 
+/** Fixed-size pool: walking and landings reuse the same lightweight dust sprites. */
+class SandParticles {
+  private cursor = 0;
+  private particles: { sprite: THREE.Sprite; velocity: THREE.Vector3; life: number; duration: number; size: number }[] = [];
+
+  constructor(scene: THREE.Scene) {
+    const texture = canvasTex(32, 32, (c) => {
+      const glow = c.createRadialGradient(16, 16, 1, 16, 16, 15);
+      glow.addColorStop(0, 'rgba(255,239,196,1)');
+      glow.addColorStop(0.4, 'rgba(236,207,153,0.65)');
+      glow.addColorStop(1, 'rgba(236,207,153,0)');
+      c.fillStyle = glow;
+      c.fillRect(0, 0, 32, 32);
+    });
+    for (let i = 0; i < 96; i++) {
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
+      sprite.visible = false;
+      scene.add(sprite);
+      this.particles.push({ sprite, velocity: new THREE.Vector3(), life: 0, duration: 1, size: 0 });
+    }
+  }
+
+  emit(x: number, z: number, landing = false): void {
+    // Keep dust on the island, rather than emitting it over the water.
+    if (Math.abs(x) > COURT.halfW + 2.5 || Math.abs(z) > COURT.halfLen + 2.5) return;
+    for (let i = 0; i < (landing ? 18 : 3); i++) {
+      const p = this.particles[this.cursor++ % this.particles.length];
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (0.25 + Math.random() * 0.65) * (landing ? 1.8 : 1);
+      p.sprite.position.set(x + Math.cos(angle) * 0.09, 0.08, z + Math.sin(angle) * 0.09);
+      p.velocity.set(Math.cos(angle) * speed, (landing ? 1.1 : 0.45) + Math.random() * 0.5, Math.sin(angle) * speed);
+      p.duration = p.life = 0.3 + Math.random() * 0.25;
+      p.size = (landing ? 0.18 : 0.11) + Math.random() * 0.09;
+      p.sprite.scale.setScalar(p.size);
+      p.sprite.material.opacity = 0.5;
+      p.sprite.material.rotation = angle;
+      p.sprite.visible = true;
+    }
+  }
+
+  update(dt: number): void {
+    for (const p of this.particles) {
+      if (p.life <= 0) continue;
+      p.life = Math.max(0, p.life - dt);
+      p.sprite.visible = p.life > 0;
+      p.velocity.y -= dt * 3;
+      p.sprite.position.addScaledVector(p.velocity, dt);
+      p.sprite.position.y = Math.max(0.035, p.sprite.position.y);
+      const progress = 1 - p.life / p.duration;
+      p.sprite.material.opacity = 0.5 * (1 - progress) ** 2;
+      p.sprite.scale.setScalar(p.size * (1 + progress * 1.5));
+    }
+  }
+}
+
 class PlayerView {
   readonly group = new THREE.Group();
   readonly shadow = blobShadow();
@@ -80,6 +135,8 @@ export class World3D {
   debug = false;
 
   private views: PlayerView[];
+  private sand: SandParticles;
+  private footsteps: { x: number; z: number; distance: number; foot: number }[];
   private ball: THREE.Sprite;
   private ballShadow = blobShadow();
   private waterFallback?: THREE.CanvasTexture;
@@ -91,6 +148,11 @@ export class World3D {
   private reticleMat: THREE.MeshBasicMaterial;
   private pulse: THREE.Mesh;
   private pulseLife = 0;
+  private serveImpact: THREE.Sprite;
+  private serveImpactLife = 0;
+  private impactHoldUntil = 0;
+  private impactNeedsFrame = false;
+  private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private debugGroup = new THREE.Group();
   private reachSpheres: Partial<Record<HitType, THREE.Mesh>> = {};
   private trail: THREE.Line;
@@ -114,6 +176,8 @@ export class World3D {
     this.scene.add(sun);
 
     this.buildCourt();
+    this.sand = new SandParticles(this.scene);
+    this.footsteps = game.players.map((p) => ({ x: p.pos.x, z: p.pos.z, distance: 0, foot: 1 }));
     // Sandcastle just outside the left net post, with its original image proportions.
     const castles: THREE.Sprite[] = [];
     const castleWidth = 3;
@@ -171,6 +235,26 @@ export class World3D {
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }),
     );
     this.scene.add(this.pulse);
+
+    const impactTexture = canvasTex(128, 128, (c) => {
+      c.translate(64, 64);
+      c.beginPath();
+      for (let i = 0; i < 24; i++) {
+        const angle = i * Math.PI / 12;
+        const radius = i % 2 === 0 ? 57 : 17;
+        const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath();
+      c.fillStyle = '#fff4bd';
+      c.fill();
+    });
+    this.serveImpact = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: impactTexture, transparent: true, opacity: 0, depthWrite: false, depthTest: false,
+    }));
+    this.serveImpact.visible = false;
+    this.serveImpact.renderOrder = 2;
+    this.scene.add(this.serveImpact);
 
     // debug: reach spheres for the near player's four hit types + predicted ball path
     for (const t of ['bump', 'set', 'spike', 'serve'] as HitType[]) {
@@ -365,6 +449,7 @@ export class World3D {
   }
 
   onEvent(ev: GameEvent): void {
+    if (ev.kind === 'land' && !this.reducedMotion.matches) this.sand.emit(ev.x, ev.z, true);
     if (ev.kind === 'net') this.netShake = 0.3;
     if (ev.kind === 'hit') {
       const b = this.game.ball.pos;
@@ -372,6 +457,11 @@ export class World3D {
       this.pulse.lookAt(this.camera.position);
       this.pulseLife = 0.25;
       (this.pulse.material as THREE.MeshBasicMaterial).color.setHex(ev.quality > 0.85 ? 0xffff66 : ev.quality > 0.4 ? 0xffffff : 0xff6655);
+      if ((ev.type === 'serve' || ev.type === 'spike') && !this.reducedMotion.matches) {
+        this.serveImpact.position.set(b.x, b.y, b.z);
+        this.serveImpactLife = 0.12;
+        this.impactNeedsFrame = true;
+      }
     }
   }
 
@@ -380,7 +470,40 @@ export class World3D {
     const g = this.game;
     const human = g.players[0];
 
+    // A small contact burst and two-frame visual hold; simulation keeps running.
+    if (this.reducedMotion.matches) {
+      this.serveImpactLife = 0;
+      this.impactHoldUntil = 0;
+      this.impactNeedsFrame = false;
+    }
+    this.serveImpactLife = Math.max(0, this.serveImpactLife - dt);
+    this.serveImpact.visible = this.serveImpactLife > 0;
+    if (this.serveImpact.visible) {
+      const progress = 1 - this.serveImpactLife / 0.12;
+      this.serveImpact.scale.setScalar(0.7 + progress * 0.8);
+      this.serveImpact.material.opacity = (1 - progress) * 0.8;
+      this.serveImpact.material.rotation = progress * 0.2;
+    }
+
     for (const v of this.views) v.update();
+    this.sand.update(dt);
+    for (let i = 0; i < g.players.length; i++) {
+      const player = g.players[i];
+      const step = this.footsteps[i];
+      const distance = Math.hypot(player.pos.x - step.x, player.pos.z - step.z);
+      step.x = player.pos.x;
+      step.z = player.pos.z;
+      if (player.grounded && distance < 1 && !this.reducedMotion.matches) {
+        step.distance += distance;
+        if (step.distance >= 0.65) {
+          step.distance %= 0.65;
+          this.sand.emit(player.pos.x + step.foot * 0.15, player.pos.z);
+          step.foot *= -1;
+        }
+      } else {
+        step.distance = 0;
+      }
+    }
 
     // ball
     const b = g.ball;
@@ -441,6 +564,13 @@ export class World3D {
   }
 
   render(): void {
+    const now = performance.now();
+    if (this.impactNeedsFrame) {
+      this.impactNeedsFrame = false;
+      this.impactHoldUntil = now + 50;
+    } else if (now < this.impactHoldUntil) {
+      return;
+    }
     this.renderer.render(this.scene, this.camera);
   }
 }
