@@ -40,6 +40,7 @@ export class HandController implements Controller {
   private status = document.createElement('div');
   private result = document.createElement('div');
   private button = document.createElement('button');
+  private buttonPanel = document.createElement('div');
 
   constructor(parent: HTMLElement) {
     const panel = document.createElement('section');
@@ -59,9 +60,10 @@ export class HandController implements Controller {
     this.calibrate.disabled = true;
     this.calibrate.onclick = () => this.resetDepth();
     this.depth.textContent = 'Depth: waiting for camera';
+    this.buttonPanel.className = 'hand-button-panel';
+    this.buttonPanel.append(this.button, this.calibrate);
     const help = document.createElement('small');
-    help.textContent = 'Fist: bump · Thumb: spike/serve · Point: set · Palm: neutral. Player follows the ball automatically. Closer to camera: run faster; farther: run slower. Move hand left/right to aim. Hold hand at a comfortable distance to calibrate. Open palm between hits.';
-    panel.append(title, this.video, this.result, this.status, this.depth, this.button, this.calibrate, help);
+    panel.append(this.video, this.result, this.status, this.depth, this.buttonPanel, help);
     parent.append(panel);
     window.addEventListener('pagehide', () => this.stop());
   }

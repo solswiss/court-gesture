@@ -21,8 +21,8 @@ function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => 
 function blobShadow(): THREE.Mesh {
   const tex = canvasTex(64, 64, (g) => {
     const grd = g.createRadialGradient(32, 32, 2, 32, 32, 30);
-    grd.addColorStop(0, 'rgba(0,0,0,0.55)');
-    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    grd.addColorStop(0, 'rgba(107, 41, 0, 0.55)');
+    grd.addColorStop(1, 'rgba(174, 126, 6, 0.2)');
     g.fillStyle = grd;
     g.fillRect(0, 0, 64, 64);
   });
@@ -94,7 +94,7 @@ class PlayerView {
     this.legs[1].rotation.x = -Math.sin(this.walkTime) * maxLegSwing;
 
     this.shadow.position.set(p.pos.x, 0.02, p.pos.z);
-    const s = 1.1 / (1 + p.y * 0.3);
+    const s = 1.1 / (1 + p.y * 1.2);
     this.shadow.scale.set(s, s, 1);
   }
 }
@@ -412,7 +412,7 @@ export class World3D {
     const b = g.ball;
     this.ball.position.set(b.pos.x, b.pos.y, b.pos.z);
     this.ballShadow.position.set(b.pos.x, 0.02, b.pos.z);
-    const sh = 0.7 / (1 + Math.max(0, b.pos.y - BALL.radius) * 0.18);
+    const sh = 1 / (.5 + Math.max(0, b.pos.y - BALL.radius) * 0.18);
     this.ballShadow.scale.set(sh, sh, 1);
 
     // net wobble on contact

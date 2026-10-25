@@ -11,6 +11,8 @@ function el(cls: string, parent: HTMLElement, tag = 'div'): HTMLElement {
 }
 
 export class Hud {
+  private island: HTMLElement;
+  private bay: HTMLElement;
   private score: HTMLElement;
   private status: HTMLElement;
   private touches: HTMLElement;
@@ -22,16 +24,21 @@ export class Hud {
 
   constructor(parent: HTMLElement) {
     const root = el('hud', parent);
-    this.score = el('hud-score', root);
-    this.touches = el('hud-touches', root);
-    this.status = el('hud-status', root);
+    const topContainer = el('hud-top', root);
+    this.island = el('hud-island', topContainer);
+    const homeLabel = el('hud-island-home-label', this.island);
+    homeLabel.textContent = "home";
+    this.score = el('hud-score', this.island);
+    const awayLabel = el('hud-island-away-label', this.island);
+    awayLabel.textContent = "away";
+    this.bay = el('hud-touches-bay', topContainer);
+    this.touches = el('hud-touches', this.bay);
+    this.status = el('hud-status', this.bay);
     this.hit = el('hud-hit', root);
     this.dbg = el('hud-debug', root);
     this.help = el('hud-help', root);
     this.help.innerHTML = [
-      'Enable camera for hand movement + gestures. Keyboard when camera is off.<br><b>Move</b> WASD &nbsp; <b>Jump</b> Space &nbsp; <b>Aim</b> mouse (or arrow keys) &nbsp; <b>Power</b> hold Shift',
-      '<b>Bump</b> Q &nbsp; <b>Set</b> E &nbsp; <b>Spike</b> F &nbsp; <b>Serve</b> X (toss, then X again to hit)',
-      '<b>Debug</b> ` &nbsp; <b>Restart</b> Enter (after game over)',
+      '<ul><li>jump [space]</li><li>aim [hz pos][mouse][arrow keys]</li><li>power [z pos][hold shift]</li><li>bump [fist][Q]</li><li>set [point up][E]</li><li>spike [thumbs up][F]</li><li>serve [spike+nt+spike][X]</li><li>neutral [palm]</li><li>debug [`]</li><li>restart [enter]</li></ul>'
     ].join('<br>');
     this.dbg.style.display = 'none';
   }
@@ -56,7 +63,7 @@ export class Hud {
   }
 
   update(g: Game, dt: number): void {
-    const s = `YOU ${g.scores[0]}  —  ${g.scores[1]} CPU`;
+    const s = `${g.scores[0]} — ${g.scores[1]}`;
     if (s !== this.last.score) this.score.textContent = this.last.score = s;
 
     const st = this.statusText(g);
