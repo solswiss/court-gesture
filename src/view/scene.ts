@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BertFish } from './bert-fish';
 import { BALL, COURT, NET } from '../config';
 import { sampleTrajectory } from '../sim/ball';
 import type { Game } from '../sim/game';
@@ -166,6 +167,7 @@ export class World3D {
   private ball: THREE.Sprite;
   private ballShadow = blobShadow();
   private waterFallback?: THREE.CanvasTexture;
+  private berts: BertFish[];
   private net: THREE.Group;
   private netMaterials: THREE.Material[] = [];
   private netOpacity = 1;
@@ -189,6 +191,7 @@ export class World3D {
     private game: Game,
   ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.localClippingEnabled = true;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     parent.appendChild(this.renderer.domElement);
 
@@ -202,6 +205,11 @@ export class World3D {
     this.scene.add(sun);
 
     this.buildCourt();
+    this.berts = [
+      new BertFish(this.scene, 0, -11),
+      new BertFish(this.scene, 10, 0),
+      new BertFish(this.scene, 4, 11),
+    ];
     this.sand = new SandParticles(this.scene);
     this.footsteps = game.players.map((p) => ({ x: p.pos.x, z: p.pos.z, distance: 0, foot: 1 }));
     // Sandcastle just outside the left net post, with its original image proportions.
@@ -209,7 +217,7 @@ export class World3D {
     const castleWidth = 3;
     const castleTexture = new THREE.TextureLoader().load('/sand-castle.png', (texture) => {
       const height = castleWidth * texture.image.height / texture.image.width;
-      for (const castle of castles) castle.scale.set(castleWidth, height, 1);
+      for (const castle of castles) castle.scale.set(castleWidth + 2, height + 2, 1);
     });
     castleTexture.colorSpace = THREE.SRGBColorSpace;
     const castleMaterial = new THREE.SpriteMaterial({
@@ -220,12 +228,29 @@ export class World3D {
     {
       const castle = new THREE.Sprite(castleMaterial);
       castle.center.set(0.5, 0);
-      castle.position.set(-(NET.halfW + 1.8), 0.02, 0.5);
+      castle.position.set(-(NET.halfW + 1.8) - 2, 0.02, 0.5);
       castle.scale.set(castleWidth, castleWidth, 1);
       castle.renderOrder = 1; // Draw after the transparent sand shelf and water.
       castles.push(castle);
       this.scene.add(castle);
     }
+    // Palm tree on the sand outside the right sideline.
+    const palmHeight = 5.5;
+    const palmTexture = new THREE.TextureLoader().load('/palm-tree.png', (texture) => {
+      palm.scale.set(palmHeight * texture.image.width / texture.image.height, palmHeight, 1);
+    });
+    palmTexture.colorSpace = THREE.SRGBColorSpace;
+    const palm = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: palmTexture,
+      transparent: true,
+      depthWrite: false,
+    }));
+    palm.center.set(0.5, 0);
+    palm.position.set(COURT.halfW + 3.5, 0.02, 1);
+    palm.scale.set(palmHeight, palmHeight, 1);
+    palm.renderOrder = 1;
+    this.scene.add(palm);
+
     this.net = this.buildNet();
     this.scene.add(this.net); 
 
@@ -492,6 +517,7 @@ export class World3D {
   }
 
   update(dt: number, t: number): void {
+    for (const bert of this.berts) bert.update(dt);
     this.waterFallback?.offset.set(t * 0.015, Math.sin(t * 0.2) * 0.025);
     const g = this.game;
     const human = g.players[0];
