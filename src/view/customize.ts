@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { loadAppearance, PANTS, type Appearance } from '../appearance';
+import { loadAppearance, type Appearance } from '../appearance';
 import { Player } from '../sim/player';
 import { PlayerView } from './scene';
 
@@ -18,19 +18,12 @@ export class Customize {
     const preview = document.createElement('div'); preview.className = 'character-preview';
     this.element.append(title, preview);
     const apply = () => { Object.assign(this.player, this.appearance); change({ ...this.appearance }); };
-    for (const [name, key] of [['Character color', 'color'], ['Pants color', 'pantsColor']] as const) {
+    for (const [name, key] of [['Character color', 'color']] as const) {
       const label = document.createElement('label'); label.textContent = name;
       const input = document.createElement('input'); input.type = 'color'; input.value = '#' + this.appearance[key].toString(16).padStart(6, '0');
       input.oninput = () => { this.appearance[key] = parseInt(input.value.slice(1), 16); apply(); };
       label.append(input); this.element.append(label);
     }
-    const label = document.createElement('label'); label.textContent = 'Pants style';
-    const styles = document.createElement('select');
-    const names = { shorts: 'Beach shorts', boardshorts: 'Striped boardshorts', pants: 'Long pants' };
-    for (const style of PANTS) { const option = document.createElement('option'); option.value = style; option.textContent = names[style]; option.selected = this.appearance.pants === style; styles.append(option); }
-    styles.onchange = () => { this.appearance.pants = styles.value as Appearance['pants']; apply(); };
-    label.append(styles); this.element.append(label);
-    const done = document.createElement('button'); done.textContent = 'Done'; done.onclick = back; this.element.append(done);
     Object.assign(this.player, this.appearance);
     // Allocate a preview only when the customization screen is first opened.
     this.element.addEventListener('preview-open', () => {

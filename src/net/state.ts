@@ -16,7 +16,7 @@ export function snapshot(game: Game, seq: number, events: GameEvent[] = []) {
     touchCount: game.touchCount, lastTouchSide: game.lastTouchSide, hitSerial: game.hitSerial,
     ball: { pos: { ...game.ball.pos }, vel: { ...game.ball.vel }, mode: game.ball.mode, landing: game.ball.landing && { ...game.ball.landing } },
     players: game.players.map(p => ({
-      color: p.color, pants: p.pants, pantsColor: p.pantsColor, pos: { ...p.pos }, y: p.y, vx: p.vx, vz: p.vz, vy: p.vy,
+      color: p.color, pos: { ...p.pos }, y: p.y, vx: p.vx, vz: p.vz, vy: p.vy,
       grounded: p.grounded, diveTime: p.diveTime, diveCooldown: p.diveCooldown, swing: p.swing, aim: { ...p.aim }, lastType: p.lastType,
       pending: p.pending && { ...p.pending }, lastTouchTime: p.lastTouchTime,
     })), events,

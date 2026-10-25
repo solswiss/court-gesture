@@ -100,9 +100,6 @@ export class PlayerView {
   private legs: THREE.Mesh[] = [];
   private walkTime = 0;
   private bodyMaterial = new THREE.MeshLambertMaterial();
-  private pantsMaterial = new THREE.MeshLambertMaterial();
-  private clothing: THREE.Mesh[] = [];
-  private stripes: THREE.Mesh[] = [];
 
   constructor(private player: Player) {
     const body = new THREE.Mesh(
@@ -122,10 +119,7 @@ export class PlayerView {
       leg_geo.translate(0, -.7, 0); // pivot at the shoulder
       const leg = new THREE.Mesh(leg_geo, this.bodyMaterial);
       leg.position.set(sx * 0.12, 1.1, 0);
-      const cloth = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1, 12), this.pantsMaterial);
       const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.124, 0.124, 0.045, 12), new THREE.MeshLambertMaterial({ color: 0xfff5dd }));
-      leg.add(cloth, stripe);
-      this.clothing.push(cloth); this.stripes.push(stripe);
       this.group.add(leg);
       this.legs.push(leg);
     }
@@ -135,14 +129,6 @@ export class PlayerView {
   update(dt: number): void {
     const p = this.player;
     this.bodyMaterial.color.setHex(p.color);
-    this.pantsMaterial.color.setHex(p.pantsColor);
-    const length = p.pants === 'pants' ? 0.78 : p.pants === 'boardshorts' ? 0.48 : 0.28;
-    this.clothing.forEach((cloth, i) => {
-      cloth.scale.y = length;
-      cloth.position.y = -0.25 - length / 2;
-      this.stripes[i].visible = p.pants === 'boardshorts';
-      this.stripes[i].position.y = -0.25 - length + 0.07;
-    });
     this.group.position.set(p.pos.x, p.y, p.pos.z);
     this.group.rotation.x = p.diveTime > 0 ? -1.1 * Math.sin(Math.PI * p.diveTime / 0.3) : 0;
     const progress = 1 - THREE.MathUtils.clamp(p.swing / 0.28, 0, 1);

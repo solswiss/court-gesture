@@ -1,4 +1,3 @@
-import type { Pants } from '../appearance';
 import { COURT, PLAYER, PLAYER_BOUNDS, RULES } from '../config';
 import type { Aim, HitType, PlayerInput, Side } from '../types';
 import { approach, clamp } from '../util';
@@ -26,8 +25,6 @@ export class Player {
   lastTouchTime = -10;
   swing = 0; // animation timer for the view
   aim: Aim = { x: 0, d: 0, power: 0.6 };
-  pants: Pants = 'shorts';
-  pantsColor = 0x183849;
   lastType: HitType = 'bump';
 
   constructor(
