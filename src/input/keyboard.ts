@@ -24,7 +24,6 @@ const PREVENT = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRig
 export class HumanController implements Controller {
   private keys = new Set<string>();
   private queued: HitType | null = null;
-  private dive = false;
   private mouse = { x: 0, y: 0 }; // -1..1, up = deeper
   private aim = { x: 0, d: 0 };
 
@@ -32,7 +31,7 @@ export class HumanController implements Controller {
     window.addEventListener('keydown', this.onDown);
     window.addEventListener('keyup', this.onUp);
     window.addEventListener('blur', () => this.keys.clear());
-    window.addEventListener('focusin', () => { this.keys.clear(); this.queued = null; this.dive = false; });
+    window.addEventListener('focusin', () => { this.keys.clear(); this.queued = null; });
     window.addEventListener('mousemove', this.onMouse);
   }
 
@@ -42,7 +41,6 @@ export class HumanController implements Controller {
     if (PREVENT.has(e.code)) e.preventDefault();
     if (e.repeat) return;
     this.keys.add(e.code);
-    if (e.code === 'KeyC') this.dive = true;
     const t = ACTION_KEYS[e.code];
     if (t) this.queued = t;
   };
@@ -62,8 +60,7 @@ export class HumanController implements Controller {
     const input = emptyInput();
     input.moveF = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0);
     input.jump = k.has('Space');
-    input.dive = this.dive;
-    this.dive = false;
+
     input.action = this.queued;
     this.queued = null;
 

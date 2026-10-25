@@ -17,7 +17,7 @@ export function snapshot(game: Game, seq: number, events: GameEvent[] = []) {
     ball: { pos: { ...game.ball.pos }, vel: { ...game.ball.vel }, mode: game.ball.mode, landing: game.ball.landing && { ...game.ball.landing } },
     players: game.players.map(p => ({
       color: p.color, pants: p.pants, pantsColor: p.pantsColor, pos: { ...p.pos }, y: p.y, vx: p.vx, vz: p.vz, vy: p.vy,
-      grounded: p.grounded, diveTime: p.diveTime, diveCooldown: p.diveCooldown, swing: p.swing, aim: { ...p.aim }, lastType: p.lastType,
+      grounded: p.grounded, swing: p.swing, aim: { ...p.aim }, lastType: p.lastType,
       pending: p.pending && { ...p.pending }, lastTouchTime: p.lastTouchTime,
     })), events,
   };
@@ -41,7 +41,7 @@ export function isSnapshot(value: unknown, count: number): value is Snapshot {
     || !s.ball || !vec(s.ball.pos) || !vec(s.ball.vel) || !['held', 'live', 'dead'].includes(s.ball.mode)
     || !(s.ball.landing === null || (s.ball.landing && finite(s.ball.landing.x, s.ball.landing.z)))
     || !Array.isArray(s.players) || s.players.length !== count || !Array.isArray(s.events) || s.events.length > 64) return false;
-  if (!s.players.every(p => p && validAppearance(p) && p.pos && finite(p.pos.x, p.pos.z, p.y, p.vx, p.vz, p.vy, p.swing, p.lastTouchTime, p.diveTime, p.diveCooldown)
+  if (!s.players.every(p => p && validAppearance(p) && p.pos && finite(p.pos.x, p.pos.z, p.y, p.vx, p.vz, p.vy, p.swing, p.lastTouchTime)
     && typeof p.grounded === 'boolean' && p.aim && finite(p.aim.x, p.aim.d, p.aim.power) && hit(p.lastType)
     && (p.pending === null || (p.pending && hit(p.pending.type) && finite(p.pending.age))))) return false;
   return s.events.every(e => {
@@ -119,8 +119,8 @@ export function sanitizeInput(value: unknown): PlayerInput | undefined {
   if (!value || typeof value !== 'object') return;
   const v = value as PlayerInput;
   if (!v.aim || ![v.moveX, v.moveF, v.aim.x, v.aim.d, v.aim.power].every(n => typeof n === 'number' && Number.isFinite(n))) return;
-  if ((v.dive !== undefined && typeof v.dive !== 'boolean') || typeof v.jump !== 'boolean' || (v.action !== null && !['bump', 'set', 'spike', 'serve'].includes(v.action))) return;
-  return { moveX: clamp(v.moveX, -1, 1), moveF: clamp(v.moveF, -1, 1), jump: v.jump, dive: v.dive ?? false, action: v.action,
+  if (typeof v.jump !== 'boolean' || (v.action !== null && !['bump', 'set', 'spike', 'serve'].includes(v.action))) return;
+  return { moveX: clamp(v.moveX, -1, 1), moveF: clamp(v.moveF, -1, 1), jump: v.jump, action: v.action,
     aim: { x: clamp(v.aim.x, -1, 1), d: clamp(v.aim.d, -1, 1), power: clamp(v.aim.power, 0, 1) } };
 }
 
@@ -128,7 +128,6 @@ export function sanitizeInput(value: unknown): PlayerInput | undefined {
 export class RemoteController implements Controller {
   private input = emptyInput();
   private actions: NonNullable<PlayerInput['action']>[] = [];
-  private dive = false;
   private seq = -1;
   private received = -Infinity;
   receive(seq: number, value: unknown, now: number): boolean {
@@ -137,14 +136,12 @@ export class RemoteController implements Controller {
     this.seq = seq;
     this.received = now;
     this.input = input;
-    this.dive ||= !!input.dive;
     if (input.action && this.actions.length < 4) this.actions.push(input.action);
     return true;
   }
   update(): PlayerInput {
-    if (performance.now() - this.received > 300) { this.actions = []; this.dive = false; return emptyInput(); }
-    const dive = this.dive; this.dive = false;
-    return { ...this.input, dive, aim: { ...this.input.aim }, action: this.actions.shift() ?? null };
+    if (performance.now() - this.received > 300) { this.actions = []; return emptyInput(); }
+    return { ...this.input, aim: { ...this.input.aim }, action: this.actions.shift() ?? null };
   }
 }
 

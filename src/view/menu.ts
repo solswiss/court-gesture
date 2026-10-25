@@ -41,7 +41,7 @@ export class Menu {
     };
     const help = document.createElement('p');
     help.className = 'menu-help';
-    help.textContent = 'Players track the ball automatically. Hand offset aims your shot. Peace sign: dive · fist: bump · point up: set · thumbs up: spike/serve. Keyboard: Space, C to dive, Q/E/F/X. Use the camera panel to enable hand tracking.';
+    help.textContent = 'Players track the ball automatically. Hand offset aims your shot. Fist: bump · point up: set · thumbs up: spike/serve. Keyboard: Space, Q/E/F/X. Use the camera panel to enable hand tracking.';
     this.play.onclick = () => { this.started = true; this.show(false); };
     this.restart.textContent = 'New match'; this.restart.disabled = client;
     this.restart.onclick = () => { game.restart(); this.started = true; this.show(false); };

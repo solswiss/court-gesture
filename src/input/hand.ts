@@ -10,7 +10,6 @@ const GESTURES: Record<string, { label: string; action: HitType | null }> = {
   Closed_Fist: { label: 'Closed fist', action: 'bump' },
   Thumb_Up: { label: 'Thumbs up', action: 'spike' },
   Pointing_Up: { label: 'Pointing up', action: 'set' },
-  Victory: { label: 'Peace sign · dive', action: null },
   Open_Palm: { label: 'Open palm', action: null },
 };
 
@@ -27,7 +26,6 @@ export class HandController implements Controller {
   private candidateFrames = 0;
   private stable = '';
   private queued: HitType | null = null;
-  private queuedDive = false;
   private move = { x: 0, f: 0 };
   private center?: { x: number; y: number; scale: number };
   private calibration: { x: number; y: number; scale: number }[] = [];
@@ -125,7 +123,6 @@ export class HandController implements Controller {
     this.tracking = false;
     this.move = { x: 0, f: 0 };
     this.queued = null;
-    this.queuedDive = false;
     this.candidate = this.stable = '';
     this.candidateFrames = 0;
     this.history.clear();
@@ -187,7 +184,6 @@ export class HandController implements Controller {
           if (this.candidateFrames >= 3 && name !== this.stable) {
             this.stable = name;
             this.queued = gesture?.action ?? null;
-            this.queuedDive = name === 'Victory';
           }
         }
       }
@@ -211,8 +207,6 @@ export class HandController implements Controller {
     input.moveX = autoLateral(game, player);
     input.aim = { ...this.handAim, x: this.handAim.x * player.side };
     // input.jump = keyboard.jump;
-    // input.dive = this.queuedDive || keyboard.dive;
-    this.queuedDive = false;
     input.action = this.queued;
     this.queued = null;
     if ((game.phase === 'ready' || game.phase === 'toss') && game.server === player && input.action === 'spike') input.action = 'serve';
