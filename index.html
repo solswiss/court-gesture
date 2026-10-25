@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Court Gesture</title>
+    <style>
+      @font-face {
+        font-family: 'RiiCookie';
+        src: url('/RiiCookieRt.otf') format('opentype');
+      }
+
+      :root {
+        --font-secondary: Helvetica, sans-serif;
+        --font-primary: #333;
+      }
+
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd3ff; font-family: 'RiiCookie', system-ui, sans-serif; color: var(--font-primary); }
+      #app { position: fixed; inset: 0; }
+      canvas { display: block; width: 100%; height: 100%; }
+      .hud { position: absolute; inset: 0; pointer-events: none; color: #fff; width: 100vw;
+        text-shadow: 
+            -1px -1px 0 #000,  
+            1px -1px 0 #000,
+            -1px  1px 0 #000,
+            1px  1px 0 #000;}
+      .hud-top {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        min-width: max-content;
+        width: 100%;
+        position: absolute; 
+        top: 14px; 
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .hud-tutorial {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        min-width: max-content;
+        width: 100%;
+        position: absolute; 
+        top: 14px; 
+        left: 50%;
+        transform: translateX(-50%);
+        align-items: center;
+        text-align: center;
+        line-height: 1.2;
+        /* border-radius: 200px;
+        border: 2px solid #fff; */
+        background: transparent;
+        display: flex;
+        flex-direction: row;
+        width: 24em;
+        color: #fff;
+        font-size: 20px;
+        text-shadow: 
+            -1px -1px 0 #000,  
+            1px -1px 0 #000,
+            -1px  1px 0 #000,
+            1px  1px 0 #000;
+      }
+      .hud-island {
+        align-items: center;
+        text-align: center;
+        /* border-radius: 200px;
+        border: 2px solid #fff; */
+        background: transparent;
+        display: flex;
+        flex-direction: row;
+        width: 24em;
+        color: #fff;
+        text-shadow: 
+            -1px -1px 0 #000,  
+            1px -1px 0 #000,
+            -1px  1px 0 #000,
+            1px  1px 0 #000;
+        .hud-island-home-label,
+          .hud-island-away-label {
+          padding: 0 16px;
+          width: 4ch;
+          font-size: 20px;
+        }
+        .hud-score {
+          font-size: 28px; 
+          letter-spacing: .02em; 
+          font-size: 42px;
+          width: 100%;
+          text-align: center;
+          line-height: 1.2;
+        }
+      }
+      .hud-bay {
+        display: flex;
+        flex-direction: row;
+        border-radius: 200px;
+        border: 2px solid #fff;
+        padding: 8px;
+      }
+      .hud-touches { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); font-size: 14px; opacity: .9; }
+      .hud-hit { position: absolute; bottom: 24%; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 600; opacity: 0; transition: opacity .25s; }
+      .hud-hit.show { opacity: 1; }
+      .hud-hit.q3 { color: #ffee55; } .hud-hit.q2 { color: #fff; } .hud-hit.q1 { color: #ffc27a; } .hud-hit.q0 { color: #ff7766; }
+      .hud-debug { position: absolute; top: 80px; left: 12px; font: 12px/1.4 ui-monospace, monospace; background: rgba(0,0,0,.45); padding: 6px 8px; border-radius: 6px; }
+      .hud-help { position: absolute; left: 12px; top: 10px; font-size: 12px; line-height: 1.6; opacity: .92; background: transparent; padding: 0; margin: 0; border-radius: 8px; width: max-content;
+        ul {
+          list-style: none;
+          text-align: start;
+          font-size: 14px;
+          color: #fff;
+          padding: 0;
+          margin: 0;
+          text-shadow: 
+            -1px -1px 0 #000,  
+            1px -1px 0 #000,
+            -1px  1px 0 #000,
+            1px  1px 0 #000;
+        }
+      }
+      /* .menu-toggle { position: absolute; z-index: 8; bottom: 12px; right: 12px; padding: 10px 18px; border: 1px solid #ffffff80; border-radius: 20px; background: #152131df; color: white; cursor: pointer; } */
+      .menu-restart { position: absolute; z-index: 8; bottom: 12px; right: 12px; padding: 10px 18px; border: 1px solid #ffffff80; border-radius: 20px; background: #152131df; color: white; cursor: pointer; }
+      .game-menu { position: absolute; inset: 0; z-index: 20; overflow: auto; color: #fff5df; background: #358f9e; }
+      .game-menu[hidden], .title-menu [hidden] { display: none; }
+      .title-beach { position: fixed; inset: 0; background: linear-gradient(#7bb9c9 0%, #f9dab0 48%, #4b9baf 49%, #28a4b3 63%, #edd09f 76%); }
+      .title-beach canvas { width: 100%; height: 100%; }
+      .game-menu::after { content: ''; position: fixed; inset: 0; pointer-events: none; background: linear-gradient(90deg, #7cb2c300 30%, #60b3c855 58%, #83dfe6e8 100%), linear-gradient(0deg, #163c5266, transparent 30%); }
+      .title-menu { position: relative; z-index: 1; margin-left: auto; box-sizing: border-box; width: min(470px, 43%); min-height: 100%; padding: clamp(35px, 7vh, 76px) clamp(28px, 4vw, 65px) 26px 20px; display: flex; flex-direction: column; align-items: stretch; text-align: right; }
+      .title-eyebrow { font-size: 9px; letter-spacing: .24em; margin: 0 0 22px; opacity: .7; }
+      .title-wordmark { font-family: var(--secondary-font), 'Times New Roman', serif; font-size: clamp(48px, 6.5vw, 100px); font-weight: 500; line-height: .85; letter-spacing: -.05em; margin: 0; text-shadow: 0 3px 30px #11374444; }
+      .title-wordmark span { display: block; font-size: .72em; letter-spacing: .04em; margin-top: .18em; }
+      .title-rule { height: 1px; background: linear-gradient(90deg, transparent, #fff0cbb0); margin: 25px 0 14px; }
+      .title-subtitle { font-size: 12px; letter-spacing: .02em; opacity: .75; line-height: 1.6; margin: 0; }
+      .title-navigation { display: grid; gap: 5px; margin: auto 0; padding: 32px 0; font-size: 32px;}
+      .title-menu button { position: relative; font: italic 20px/1.5 var(--secondary-font), serif; text-align: right; color: #fff2d5b3; background: transparent; border: 0; border-radius: 0; padding: 8px 0 8px 24px; cursor: pointer; transition: color .15s, transform .15s; }
+      .title-menu button:hover, .title-menu button:focus-visible { color: #fff8de; transform: translateX(-5px); outline: none; text-shadow: 0 0 22px #fff0ba66; }
+      .title-navigation button:hover::before, .title-navigation button:focus-visible::before { content: ''; position: absolute; left: 3px; top: 19px; width: 6px; height: 6px; background: currentColor; transform: rotate(45deg); }
+      .title-menu button:disabled { opacity: .4; cursor: default; }
+      .title-footer { font-size: 12px; letter-spacing: .19em; opacity: .5; margin: 0; padding-top: 15px; }
+      .title-beach-caption { position: absolute; bottom: 7%; left: 6%; z-index: 1; color: #fff7dd; text-shadow: 0 2px 15px #163f55aa; }
+      .title-beach-caption span { font-size: 9px; letter-spacing: .25em; }
+      .title-beach-caption p { font: italic 22px/1.4 var(--secondary-font), serif; margin: 12px 0 0; }
+      .title-subscreen { display: grid; gap: 17px; margin: 24px 0; padding: 20px; border: 1px solid #fce7b333; border-radius: 3px; background: #163d4b85; text-align: left; }
+      .title-subscreen h2 { font: 24px var(--secondary-font), serif; margin: 0 0 5px; }
+      .title-subscreen label { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+      .title-subscreen input, .title-subscreen select { margin-left: auto; accent-color: #f0d298; }
+      .title-subscreen select { min-width: 85px; background: #204b58; color: #fff5df; border: 1px solid #fff5df66; padding: 8px; border-radius: 3px; }
+      .character-preview { display: flex; justify-content: center; border-radius: 3px; background: linear-gradient(#93c6ce55, #f7dca133); overflow: hidden; }
+      .character-preview canvas { width: 280px; height: 200px; max-width: 100%; }
+      .customize-screen input[type=color] { width: 58px; height: 38px; border: 0; padding: 2px; cursor: pointer; }
+      .game-menu.customizing .title-menu { height: 100dvh; min-height: 0; justify-content: center; padding-top: 16px; padding-bottom: 16px; }
+      .game-menu.customizing .title-menu > header, .game-menu.customizing .title-footer { display: none; }
+      .game-menu.customizing .customize-screen { margin: 0; gap: 12px; }
+      .game-menu.customizing .character-preview canvas { width: auto; height: min(200px, 30dvh); max-width: 100%; object-fit: contain; }
+      .menu-help { font-size: 12px; line-height: 1.7; margin: 0; opacity: .85; }
+      .title-controls { display: grid; grid-template-columns: auto 1fr; gap: 10px; font-size: 12px; margin: 0; }
+      .title-controls dd { text-align: right; margin: 0; opacity: .75; }
+      .menu-open > .hud, .menu-open > .hand-panel, .menu-open > .menu-toggle { visibility: hidden; }
+      @media (max-width: 650px) {
+        .title-menu { width: 58%; padding: 40px 22px 22px 12px; }
+        .title-wordmark { font-size: clamp(40px, 10vw, 64px); }
+        .title-eyebrow { font-size: 8px; line-height: 1.7; }
+        .title-menu button { font-size: 17px; }
+        .title-beach-caption { left: 5%; bottom: 6%; max-width: 32%; }
+        .title-beach-caption p { font-size: 15px; }
+        .title-beach-caption span { font-size: 7px; }
+        .title-subscreen { padding: 12px; gap: 12px; }
+        .title-controls { grid-template-columns: 1fr; gap: 5px; }
+        .title-controls dd { text-align: left; margin-bottom: 4px; }
+      }
+      @media (prefers-reduced-motion: reduce) { .title-menu button { transition: none; } }
+      .network-panel { position: absolute; z-index: 6; left: 12px; bottom: 12px; max-width: min(420px, 90vw); padding: 10px; border-radius: 8px; color: white; background: #152131dd; display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+      .network-panel strong, .network-panel div { width: 100%; }
+      .network-panel input { min-width: 0; width: 180px; }
+      .network-panel input[readonly] { width: 100%; }
+      .network-panel[hidden], .network-panel [hidden] { display: none; }
+      .network-panel button, .network-panel input { padding: 6px; border-radius: 4px; border: 0; }
+      .hand-panel { position: absolute; z-index: 5; right: 12px; top: 12px; width: min(270px, 42vw); box-sizing: border-box; padding: 12px; border-radius: 12px; background: transparent; color: var(--font-primary); font-family: var(--font-primary), system-ui, sans-serif; font-size: 14px; line-height: 1.6; display: grid; gap: 8px; 
+        background: linear-gradient(#ffffff55, #ffffffff);
+        border-radius: 8px;
+        border: 2px solid #fff;}
+      .hand-button-panel {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+      .hand-panel video { width: 100%; max-height: 150px; object-fit: cover; transform: scaleX(-1); border-radius: 6px; background: #152131; }
+      .hand-panel button { font: inherit; padding: 8px; cursor: pointer; border: 0; border-radius: 6px; }
+      .hand-panel small { font: inherit; color: #294b5c; }
+      .hud-help { max-width: calc(58vw - 48px); }
+    </style>
+    <script type="module" crossorigin src="/assets/index-oa67ekvS.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
