@@ -10,10 +10,13 @@
     "typecheck": "tsc --noEmit",
     "rules": "tsx scripts/rules-test.ts",
     "sim": "tsx scripts/sim-test.ts",
-    "test": "tsx scripts/rules-test.ts && tsx scripts/sim-test.ts 5"
+    "test": "tsx scripts/network-test.ts && tsx scripts/hand-test.ts && tsx scripts/rules-test.ts && tsx scripts/sim-test.ts 5",
+    "test:hand": "tsx scripts/hand-test.ts",
+    "test:network": "tsx scripts/network-test.ts"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.32",
+    "peerjs": "^1.5.5",
     "three": "~0.170.0"
   },
   "devDependencies": {

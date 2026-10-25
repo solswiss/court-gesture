@@ -132,6 +132,19 @@ export class CpuController implements Controller {
       }
     }
 
+    // Only the closest teammate commits; the other covers its half of the court.
+    const teammates = g.players.filter(p => p.side === me.side);
+    const receiver = [...teammates].sort((a, c) => {
+      const da = Math.hypot(a.pos.x - ground.x, a.pos.z - ground.z);
+      const dc = Math.hypot(c.pos.x - ground.x, c.pos.z - ground.z);
+      return da - dc || a.id - c.id;
+    })[0];
+    const covering = teammates.length > 1 && receiver !== me;
+    if (covering) {
+      this.tx = me.id < 2 ? -1.8 : 1.8;
+      this.tz = me.side * (L - 3.5);
+    }
+
     // Run toward the planned spot.
     const dx = this.tx - me.pos.x;
     const dz = this.tz - me.pos.z;
@@ -142,7 +155,7 @@ export class CpuController implements Controller {
       input.moveF = -me.side * (dz / dd) * m;
     }
 
-    if (!active) return input;
+    if (!active || covering) return input;
 
     // Third touch with the ball too low to attack: pop it over instead.
     let pressType = type;

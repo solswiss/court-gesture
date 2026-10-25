@@ -300,7 +300,7 @@ export class World3D {
     this.scene.add(this.net); 
 
     // players
-    this.views = game.players.map((p) => new PlayerView(p, PLAYER_COLORS[p.side]));
+    this.views = game.players.map((p) => new PlayerView(p));
     for (const v of this.views) this.scene.add(v.group, v.shadow);
 
     // Camera-facing artwork; the simulation still uses BALL.radius for collisions.
@@ -572,7 +572,7 @@ export class World3D {
     for (const bert of this.berts) bert.update(dt);
     this.waterFallback?.offset.set(t * 0.015, Math.sin(t * 0.2) * 0.025);
     const g = this.game;
-    const human = g.players[0];
+    const human = g.players[g.viewPlayerId];
 
     // A small contact burst; serves use a visual hold, spikes pause the main loop.
     if (this.reducedMotion.matches) {
@@ -641,8 +641,8 @@ export class World3D {
     }
 
     // camera: fixed behind the near baseline, drifts a little toward the ball
-    this.camera.position.set(b.pos.x * 0.12, 9.5, 17.5);
-    this.camera.lookAt(b.pos.x * 0.05, 0.6, -1);
+    this.camera.position.set(b.pos.x * 0.12, 9.5, 17.5 * human.side);
+    this.camera.lookAt(b.pos.x * 0.05, 0.6, -human.side);
     if (g.phase === 'ready') this.ballTrail.reset();
     this.ballTrail.update(dt, b.pos, this.camera);
 

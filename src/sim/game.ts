@@ -1,6 +1,6 @@
 import { COURT, PLAYER_BOUNDS, RULES } from '../config';
 import { makeRng } from '../rng';
-import type { GameEvent, HitType, Phase, PlayerInput, Side } from '../types';
+import type { Aim, GameEvent, HitType, Phase, PlayerInput, Side } from '../types';
 import { dist3, other } from '../util';
 import { Ball } from './ball';
 import { aimTarget, contactQuality, HIT_SPECS, idealPoint, resolveHit, type Target } from './hit';
@@ -9,6 +9,7 @@ import { Player } from './player';
 /** Anything that can drive a player: keyboard, CPU, (later) MediaPipe hand, network peer. */
 export interface Controller {
   update(dt: number, game: Game, me: Player): PlayerInput;
+  sampleContactAim?(): Aim | undefined;
 }
 
 /**
@@ -19,6 +20,7 @@ export class Game {
   readonly ball = new Ball();
   readonly players: Player[];
   readonly rng: () => number;
+  viewPlayerId = 0; // Local viewpoint; does not affect simulation rules.
 
   phase: Phase = 'ready';
   phaseTimer = 0;
@@ -42,7 +44,8 @@ export class Game {
     seed = 1,
   ) {
     this.rng = makeRng(seed);
-    this.players = [new Player(0, 1, 0xffaa00), new Player(1, -1, 0x00aaff)];
+    if (controllers.length !== 2 && controllers.length !== 4) throw new Error('Game needs two or four controllers');
+    this.players = controllers.map((_, id) => new Player(id, id % 2 === 0 ? 1 : -1, id % 2 === 0 ? 0xffaa00 : 0x00aaff));
     this.server = this.players[0];
     this.resetForServe(true);
   }
@@ -128,13 +131,15 @@ export class Game {
 
   private resetForServe(teleport: boolean): void {
     const srv = this.server;
-    const rec = this.player(other(srv.side));
-    if (teleport) {
-      srv.teleport(0, srv.side * (COURT.halfLen + 1.3));
-      rec.teleport(0, rec.side * (COURT.halfLen - 3));
+    for (const pl of this.players) {
+      if (teleport) {
+        const x = this.players.length === 4 ? (pl.id < 2 ? -1.6 : 1.6) : 0;
+        pl.teleport(x, pl.side * (pl === srv ? COURT.halfLen + 1.3 : COURT.halfLen - 3));
+      }
+      pl.pending = null;
+      pl.prevContactDist = Infinity;
+      pl.lastTouchTime = -10;
     }
-    srv.pending = null;
-    rec.pending = null;
     this.ball.reset();
     this.holdBall();
     this.phase = 'ready';
@@ -167,7 +172,8 @@ export class Game {
         return;
     }
 
-    if (this.time - pl.lastTouchTime < RULES.touchCooldown) return;
+    // A team gets one contact per cooldown, even when two players overlap the ball.
+    if (this.players.some(teammate => teammate.side === pl.side && this.time - teammate.lastTouchTime < RULES.touchCooldown)) return;
 
     const spec = HIT_SPECS[act.type];
     const d = dist3(this.ball.pos, idealPoint(pl.actor, spec));
@@ -185,6 +191,8 @@ export class Game {
   private doHit(pl: Player, type: HitType, age: number, d: number): void {
     const spec = HIT_SPECS[type];
     const q = contactQuality(d, spec, age);
+    const contactAim = this.controllers[this.players.indexOf(pl)].sampleContactAim?.();
+    if (contactAim) pl.aim = { ...contactAim };
     const res = resolveHit({
       type,
       actor: pl.actor,

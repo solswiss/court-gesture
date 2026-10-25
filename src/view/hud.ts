@@ -22,7 +22,7 @@ export class Hud {
   private hitTimer = 0;
   private last = { score: '', status: '', touches: '' };
 
-  constructor(parent: HTMLElement) {
+  constructor(parent: HTMLElement, private game?: Game) {
     const root = el('hud', parent);
     const topContainer = el('hud-top', root);
     this.island = el('hud-island', topContainer);
@@ -38,14 +38,14 @@ export class Hud {
     this.dbg = el('hud-debug', root);
     this.help = el('hud-help', root);
     this.help.innerHTML = [
-      '<ul><li>jump [space]</li><li>aim [hz pos][mouse][arrow keys]</li><li>power [z pos][hold shift]</li><li>bump [fist][Q]</li><li>set [point up][E]</li><li>spike [thumbs up][F]</li><li>serve [spike+nt+spike][X]</li><li>neutral [palm]</li><li>debug [`]</li><li>restart [enter]</li></ul>'
+      '<ul><li>jump [space]</li><li>move [hand offset][WASD]</li><li>aim [hand offset][mouse][arrow keys]</li><li>power [hand size][hold shift]</li><li>bump [fist][Q]</li><li>set [point up][E]</li><li>spike [thumbs up][F]</li><li>serve [spike+nt+spike][X]</li><li>neutral [palm]</li><li>debug [`]</li><li>restart [enter]</li></ul>'
     ].join('<br>');
     this.dbg.style.display = 'none';
   }
 
   onEvent(ev: GameEvent): void {
     if (ev.kind === 'hit') {
-      const who = ev.player === 0 ? '' : 'CPU ';
+      const who = ev.player === (this.game?.viewPlayerId ?? 0) ? '' : `P${ev.player + 1} `;
       this.hit.textContent = `${who}${ev.type.toUpperCase()} · ${qualityWord(ev.quality)}`;
       this.hit.className = 'hud-hit show q' + (ev.quality > 0.85 ? '3' : ev.quality > 0.6 ? '2' : ev.quality > 0.3 ? '1' : '0');
       this.hitTimer = 1.1;
@@ -72,7 +72,7 @@ export class Hud {
       this.status.style.opacity = st ? '1' : '0';
     }
 
-    const t = g.phase === 'rally' && g.lastTouchSide !== 0 ? `${g.lastTouchSide === 1 ? 'Your' : 'CPU'} touches: ${g.touchCount}/3` : '';
+    const t = g.phase === 'rally' && g.lastTouchSide !== 0 ? `${g.lastTouchSide === g.players[g.viewPlayerId].side ? 'Your team’s' : 'Other team’s'} touches: ${g.touchCount}/3` : '';
     if (t !== this.last.touches) this.touches.textContent = this.last.touches = t;
 
     if (this.hitTimer > 0) {
@@ -84,15 +84,15 @@ export class Hud {
   private statusText(g: Game): string {
     switch (g.phase) {
       case 'ready':
-        return g.server.id === 0 ? 'Your serve — thumbs up or X to toss; palm, then thumbs up to hit' : 'CPU serving…';
+        return g.server.id === g.viewPlayerId ? 'Your serve — thumbs up or X to toss; palm, then thumbs up to hit' : `P${g.server.id + 1} serving…`;
       case 'toss':
-        return g.server.id === 0 ? 'Open palm, then thumbs up to serve (or X)' : '';
+        return g.server.id === g.viewPlayerId ? 'Open palm, then thumbs up to serve (or X)' : '';
       case 'point': {
-        const who = g.lastPointWinner === 1 ? 'You score' : 'CPU scores';
+        const who = g.lastPointWinner === g.players[g.viewPlayerId].side ? 'Your team scores' : 'Other team scores';
         return `${who} — ${g.message}`;
       }
       case 'over':
-        return `${g.winner === 1 ? 'You win!' : 'CPU wins'}  Press Enter to play again`;
+        return `${g.winner === g.players[g.viewPlayerId].side ? 'Your team wins!' : 'Other team wins'}  ${g.viewPlayerId === 0 ? 'Host: press Enter to play again' : 'Waiting for host to restart'}`;
       default:
         return '';
     }

@@ -32,10 +32,13 @@ export class HumanController implements Controller {
     window.addEventListener('keydown', this.onDown);
     window.addEventListener('keyup', this.onUp);
     window.addEventListener('blur', () => this.keys.clear());
+    window.addEventListener('focusin', () => { this.keys.clear(); this.queued = null; });
     window.addEventListener('mousemove', this.onMouse);
   }
 
   private onDown = (e: KeyboardEvent): void => {
+    const target = e.target;
+    if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, button'))) return;
     if (PREVENT.has(e.code)) e.preventDefault();
     if (e.repeat) return;
     this.keys.add(e.code);
