@@ -2,6 +2,7 @@ import { COURT, PLAYER_BOUNDS, RULES } from '../config';
 import { makeRng } from '../rng';
 import type { Aim, GameEvent, HitType, Phase, PlayerInput, Side } from '../types';
 import { dist3, other } from '../util';
+import { predictAt } from './ball';
 import { Ball } from './ball';
 import { aimTarget, contactQuality, HIT_SPECS, idealPoint, resolveHit, type Target } from './hit';
 import { Player } from './player';
@@ -78,6 +79,16 @@ export class Game {
     for (let i = 0; i < this.players.length; i++) {
       const pl = this.players[i];
       const input = this.controllers[i].update(dt, this, pl);
+      if (input.dive) {
+        input.dive = this.phase === 'rally' && pl.grounded && pl.diveCooldown <= dt;
+        if (input.dive) {
+          const target = predictAt(this.ball.pos, this.ball.vel, 0.65);
+          const dx = target.x - pl.pos.x, dz = target.z - pl.pos.z;
+          const distance = Math.hypot(dx, dz);
+          if (distance > 0.01) { input.moveX = dx / distance; input.moveF = -pl.side * dz / distance; }
+          input.action = 'bump';
+        }
+      }
       pl.step(dt, input, this.minDepth(pl));
     }
     for (const pl of this.players) this.processAction(pl);
@@ -175,7 +186,7 @@ export class Game {
     // A team gets one contact per cooldown, even when two players overlap the ball.
     if (this.players.some(teammate => teammate.side === pl.side && this.time - teammate.lastTouchTime < RULES.touchCooldown)) return;
 
-    const spec = HIT_SPECS[act.type];
+    const spec = pl.diveTime > 0 && act.type === 'bump' ? { ...HIT_SPECS.bump, height: 0.65, forward: 0.8, reach: 2.6, sweet: 1.2 } : HIT_SPECS[act.type];
     const d = dist3(this.ball.pos, idealPoint(pl.actor, spec));
     const prev = pl.prevContactDist;
     pl.prevContactDist = d <= spec.reach ? d : Infinity;
@@ -189,7 +200,7 @@ export class Game {
   }
 
   private doHit(pl: Player, type: HitType, age: number, d: number): void {
-    const spec = HIT_SPECS[type];
+    const spec = pl.diveTime > 0 && type === 'bump' ? { ...HIT_SPECS.bump, height: 0.65, forward: 0.8, reach: 2.6, sweet: 1.2 } : HIT_SPECS[type];
     const q = contactQuality(d, spec, age);
     const contactAim = this.controllers[this.players.indexOf(pl)].sampleContactAim?.();
     if (contactAim) pl.aim = { ...contactAim };

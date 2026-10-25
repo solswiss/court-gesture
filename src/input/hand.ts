@@ -10,6 +10,7 @@ const GESTURES: Record<string, { label: string; action: HitType | null }> = {
   Closed_Fist: { label: 'Closed fist', action: 'bump' },
   Thumb_Up: { label: 'Thumbs up', action: 'spike' },
   Pointing_Up: { label: 'Pointing up', action: 'set' },
+  Victory: { label: 'Peace sign · dive', action: null },
   Open_Palm: { label: 'Open palm', action: null },
 };
 
@@ -26,6 +27,7 @@ export class HandController implements Controller {
   private candidateFrames = 0;
   private stable = '';
   private queued: HitType | null = null;
+  private queuedDive = false;
   private move = { x: 0, f: 0 };
   private center?: { x: number; y: number; scale: number };
   private calibration: { x: number; y: number; scale: number }[] = [];
@@ -65,7 +67,7 @@ export class HandController implements Controller {
     this.buttonPanel.className = 'hand-button-panel';
     this.buttonPanel.append(this.button, this.calibrate);
     const help = document.createElement('small');
-    help.textContent = 'Hold your hand steady to calibrate. Small left/right motions steer; center your hand to auto-track the ball; forward/backward follows where the ball will land. Closer = more power. Fist: bump · point: set · thumbs up: spike/serve · palm: neutral. WASD, Space, Q/E/F/X still work.';
+    help.textContent = 'Hold your hand steady to calibrate. Small left/right motions steer; center your hand to auto-track the ball; forward/backward follows where the ball will land. Closer = more power. Peace sign: dive · fist: bump · point: set · thumbs up: spike/serve · palm: neutral. WASD, Space, Q/E/F/X still work.';
     panel.append(title, this.video, this.result, this.status, this.depth, this.buttonPanel, help);
     parent.append(panel);
     window.addEventListener('pagehide', () => this.stop());
@@ -128,6 +130,7 @@ export class HandController implements Controller {
     this.move = { x: 0, f: 0 };
     this.smooth = { x: 0, f: 0 };
     this.queued = null;
+    this.queuedDive = false;
     this.candidate = this.stable = '';
     this.candidateFrames = 0;
     this.history.clear();
@@ -189,6 +192,7 @@ export class HandController implements Controller {
           if (this.candidateFrames >= 3 && name !== this.stable) {
             this.stable = name;
             this.queued = gesture?.action ?? null;
+            this.queuedDive = name === 'Victory';
           }
         }
       }
@@ -214,6 +218,8 @@ export class HandController implements Controller {
     input.moveX = keyboard.moveX || assistedLateral(game, player, this.smooth.x * player.side);
     input.aim = { ...this.handAim, x: this.handAim.x * player.side };
     input.jump = keyboard.jump;
+    input.dive = this.queuedDive || keyboard.dive;
+    this.queuedDive = false;
     input.action = this.queued;
     this.queued = null;
     if ((game.phase === 'ready' || game.phase === 'toss') && game.server === player && input.action === 'spike') input.action = 'serve';

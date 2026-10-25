@@ -79,7 +79,7 @@ a dropped serve toss is a free re-toss; server must stay behind the end line unt
 | **1 (done)** | Court, bounds, net, rules, keyboard/mouse, CPU, solver |
 | **2 (implemented)** | MediaPipe `HandController`: `@mediapipe/tasks-vision` GestureRecognizer, calibration, one-euro filter, 2-3 frame gesture debounce, camera preview. Movement = horizontal hand offset from calibrated center, automatic forward/backward tracking (deadzone + smoothing, mirrored x). Aim = hand offset sampled from a ~200 ms buffer at contact. Depth cue = hand scale (wrist -> middle-finger base), not MediaPipe z. Keep the keyboard fallback. |
 | **3 (implemented; live network playtest pending)** | PeerJS (WebRTC) 1v1: host runs `Game`, clients send `PlayerInput`, host broadcasts snapshots at 20-30 Hz, clients interpolate. Then 4 slots for 2v2 with CPUs filling empty slots. Sim already uses a seeded RNG and fixed 120 Hz step. |
-| 4 | Juice: hit-stop, screen shake on spikes, sand puffs, ball trail, SFX, menus, difficulty. Dive if time allows. |
+| **4 (implemented)** | Juice: hit-stop, screen shake on spikes, sand puffs, ball trail, SFX, menus, difficulty. Dive if time allows. |
 
 Cut order if short on time: dive, 2v2, polish. Target: playable gesture game + online 1v1.
 
@@ -108,3 +108,11 @@ The host alone advances `Game` at 120 Hz. Clients send validated, sequenced `Pla
 For 2v2, all four players share the same ball and per-team three-touch count. Teammates share the contact cooldown to prevent simultaneous overlapping hits. CPUs choose the nearest teammate to receive while the other covers its half. Serving currently uses each team's first slot (P1 or P2).
 
 `npm run test:network` covers input validation, duplicate/action handling, stale inputs, CPU takeover, snapshot roundtrips, interpolation, event timing, four-slot reset/contact rules, and a three-minute headless 2v2 match. `npm test` includes these checks plus hand-input, rules, and 1v1 soak tests. Browser-to-browser WebRTC connectivity, camera behavior, latency and NAT traversal still need a live playtest.
+
+## Effects and match menu
+
+Local games begin at a Play menu. Use the Menu button or Escape to pause/resume a local match and change CPU difficulty (Easy/Normal/Hard), sound, or motion effects. Difficulty changes apply immediately to CPU-filled slots and are retained in the URL. Online matches continue while the menu is open; only the host can change CPU difficulty or restart. The end-of-match menu shows the final score and a New match button for the host. Clients return to play when the host restarts.
+
+Spikes have a 50 ms local hit-stop and a brief decaying camera shake. Online simulation stays continuous. Existing sand footsteps, ball landing puffs, colored ball trails and hit bursts are retained, with additional puffs when players land from a jump. Motion effects respect the operating system's reduced-motion preference and can also be switched off in the menu.
+
+Sound effects are synthesized locally with Web Audio: distinct hit sounds, serve toss, net, sand landing, point and match-ending cues. Audio unlocks after a click or key press; the menu has a mute toggle. No sound files need downloading. Camera/audio feel and menu layout still need a browser playtest. Dive uses a peace sign (MediaPipe Victory) or C. Hold for three recognition frames to trigger once; change gestures before repeating. During a rally, it lunges toward the predicted low-ball contact point for 0.3 seconds and automatically attempts a low bump with extra reach. Recovery slows movement briefly and the cooldown is 1.2 seconds. Dives are disabled during serving and while airborne. Dive state is included in multiplayer snapshots and its input is consumed once on the host.

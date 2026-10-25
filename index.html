@@ -78,6 +78,17 @@
             1px  1px 0 #000;
         }
       }
+      .menu-toggle { position: absolute; z-index: 8; bottom: 12px; right: 12px; padding: 10px 18px; border: 1px solid #ffffff80; border-radius: 20px; background: #152131df; color: white; cursor: pointer; }
+      .game-menu { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: #10273799; backdrop-filter: blur(6px); }
+      .game-menu[hidden] { display: none; }
+      .game-menu-card { width: min(400px, 100%); max-height: 85vh; overflow: auto; box-sizing: border-box; background: #fff5dd; color: #183849; padding: 28px; border-radius: 22px; box-shadow: 0 16px 60px #10273766; display: grid; gap: 14px; }
+      .game-menu-card h1, .game-menu-card p { margin: 0; }
+      .game-menu-card h1 { font-size: 32px; letter-spacing: -1px; }
+      .game-menu-card label { display: flex; align-items: center; gap: 10px; }
+      .game-menu-card select { margin-left: auto; padding: 8px; border-radius: 8px; }
+      .game-menu-card button { padding: 12px; border: 0; border-radius: 10px; background: #176b76; color: white; font: inherit; cursor: pointer; }
+      .game-menu-card button:disabled { opacity: .5; cursor: default; }
+      .menu-help { font-size: 13px; line-height: 1.6; }
       .network-panel { position: absolute; z-index: 6; left: 12px; bottom: 12px; max-width: min(420px, 90vw); padding: 10px; border-radius: 8px; color: white; background: #152131dd; display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
       .network-panel strong, .network-panel div { width: 100%; }
       .network-panel input { min-width: 0; width: 180px; }

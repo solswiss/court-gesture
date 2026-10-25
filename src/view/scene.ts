@@ -128,6 +128,7 @@ class PlayerView {
   update(dt: number): void {
     const p = this.player;
     this.group.position.set(p.pos.x, p.y, p.pos.z);
+    this.group.rotation.x = p.diveTime > 0 ? -1.1 * Math.sin(Math.PI * p.diveTime / 0.3) : 0;
     const progress = 1 - THREE.MathUtils.clamp(p.swing / 0.28, 0, 1);
     const weight = p.swing > 0 ? 1 - THREE.MathUtils.smoothstep(progress, 0.65, 1) : 0;
     for (const animatedHand of this.hands) {
@@ -180,10 +181,14 @@ export class World3D {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
   debug = false;
+  effectsEnabled = true;
+  private spikeShake = 0;
+  private spikeStrength = 0;
+  get motionEffects(): boolean { return this.effectsEnabled && !this.reducedMotion.matches; }
 
   private views: PlayerView[];
   private sand: SandParticles;
-  private footsteps: { x: number; z: number; distance: number; foot: number }[];
+  private footsteps: { x: number; z: number; distance: number; foot: number; grounded: boolean }[];
   private ball: THREE.Sprite;
   private ballTrail: BallTrail;
   private ballShadow = blobShadow();
@@ -233,7 +238,7 @@ export class World3D {
       new BertFish(this.scene, 4, 11),
     ];
     this.sand = new SandParticles(this.scene);
-    this.footsteps = game.players.map((p) => ({ x: p.pos.x, z: p.pos.z, distance: 0, foot: 1 }));
+    this.footsteps = game.players.map((p) => ({ x: p.pos.x, z: p.pos.z, distance: 0, foot: 1, grounded: p.grounded }));
     // Sandcastle just outside the left net post, with its original image proportions.
     const castles: THREE.Sprite[] = [];
     const castleWidth = 3;
@@ -549,9 +554,10 @@ export class World3D {
 
   onEvent(ev: GameEvent): void {
     if (ev.kind === 'toss' || ev.kind === 'retoss' || ev.kind === 'point' || ev.kind === 'over') this.ballTrail.reset();
-    if (ev.kind === 'land' && !this.reducedMotion.matches) this.sand.emit(ev.x, ev.z, true);
+    if (ev.kind === 'land' && this.motionEffects) this.sand.emit(ev.x, ev.z, true);
     if (ev.kind === 'net') this.netShake = 0.3;
     if (ev.kind === 'hit') {
+      if (ev.type === 'spike' && this.motionEffects) { this.spikeShake = 0.24; this.spikeStrength = 0.06 + ev.quality * 0.1; }
       const hitter = this.game.players.find((player) => player.id === ev.player);
       if (hitter) this.ballTrail.hit(PLAYER_COLORS[hitter.side]);
       const b = this.game.ball.pos;
@@ -559,7 +565,7 @@ export class World3D {
       this.pulse.lookAt(this.camera.position);
       this.pulseLife = 0.25;
       (this.pulse.material as THREE.MeshBasicMaterial).color.setHex(ev.quality > 0.85 ? 0xffff66 : ev.quality > 0.4 ? 0xffffff : 0xff6655);
-      if ((ev.type === 'serve' || ev.type === 'spike') && !this.reducedMotion.matches) {
+      if ((ev.type === 'serve' || ev.type === 'spike') && this.motionEffects) {
         this.serveImpact.position.set(b.x, b.y, b.z);
         this.serveImpactLife = 0.12;
         this.impactNeedsFrame = ev.type === 'serve'; // Spike hitstop is handled by the main loop.
@@ -575,7 +581,7 @@ export class World3D {
     const human = g.players[g.viewPlayerId];
 
     // A small contact burst; serves use a visual hold, spikes pause the main loop.
-    if (this.reducedMotion.matches) {
+    if (!this.motionEffects) {
       this.serveImpactLife = 0;
       this.impactHoldUntil = 0;
       this.impactNeedsFrame = false;
@@ -594,10 +600,12 @@ export class World3D {
     for (let i = 0; i < g.players.length; i++) {
       const player = g.players[i];
       const step = this.footsteps[i];
+      if (!step.grounded && player.grounded && this.motionEffects) this.sand.emit(player.pos.x, player.pos.z, true);
+      step.grounded = player.grounded;
       const distance = Math.hypot(player.pos.x - step.x, player.pos.z - step.z);
       step.x = player.pos.x;
       step.z = player.pos.z;
-      if (player.grounded && distance < 1 && !this.reducedMotion.matches) {
+      if (player.grounded && distance < 1 && this.motionEffects) {
         step.distance += distance;
         if (step.distance >= 0.65) {
           step.distance %= 0.65;
@@ -618,8 +626,10 @@ export class World3D {
 
     // net wobble on contact
     this.netShake = Math.max(0, this.netShake - dt);
+    if (!this.motionEffects) { this.netShake = 0; this.spikeShake = 0; this.pulseLife = 0; }
     this.net.position.z = Math.sin(t * 60) * this.netShake * 0.12;
 
+    this.pulse.visible = this.motionEffects && this.pulseLife > 0;
     // hit pulse
     if (this.pulseLife > 0) {
       this.pulseLife -= dt;
@@ -643,7 +653,13 @@ export class World3D {
     // camera: fixed behind the near baseline, drifts a little toward the ball
     this.camera.position.set(b.pos.x * 0.12, 9.5, 17.5 * human.side);
     this.camera.lookAt(b.pos.x * 0.05, 0.6, -human.side);
-    if (g.phase === 'ready') this.ballTrail.reset();
+    this.spikeShake = Math.max(0, this.spikeShake - dt);
+    if (this.motionEffects && this.spikeShake > 0) {
+      const amplitude = this.spikeStrength * (this.spikeShake / 0.24) ** 2;
+      this.camera.position.x += Math.sin(t * 110) * amplitude;
+      this.camera.position.y += Math.cos(t * 137) * amplitude * 0.6;
+    }
+    if (g.phase === 'ready' || !this.motionEffects) this.ballTrail.reset();
     this.ballTrail.update(dt, b.pos, this.camera);
 
     // Fade the mesh and tape while the ball is on the human player's side.

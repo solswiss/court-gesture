@@ -3,7 +3,7 @@ import type { Controller, Game } from '../sim/game';
 import type { GameEvent } from '../types';
 import { isSnapshot, RemoteController, SlotController, SnapshotBuffer, snapshot, type Snapshot } from './state';
 
-const VERSION = 1;
+const VERSION = 2;
 interface Guest { connection: DataConnection; slot: number; remote: RemoteController; heard: number }
 
 export class Room {
@@ -180,7 +180,7 @@ export class Room {
       const aim = this.local.sampleContactAim?.();
       if (aim) input.aim = aim;
       this.sendClock += dt;
-      if (this.sendClock >= 1 / 30 || input.action) {
+      if (this.sendClock >= 1 / 30 || input.action || input.dive) {
         this.sendClock = 0;
         if (this.connection) this.send(this.connection, { kind: 'input', seq: this.inputSequence++, input });
       }

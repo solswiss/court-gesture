@@ -52,6 +52,11 @@ export class CpuController implements Controller {
     this.skill = SKILLS[skill];
   }
 
+  setSkill(skill: CpuSkillName): void {
+    this.skill = SKILLS[skill];
+    this.thinkT = 0;
+  }
+
   update(dt: number, g: Game, me: Player): PlayerInput {
     const input = emptyInput();
     const sk = this.skill;
