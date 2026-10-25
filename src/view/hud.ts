@@ -26,14 +26,9 @@ export class Hud {
   constructor(parent: HTMLElement, private game: Game) {
     const root = el('hud', parent);
     this.tutorial = el('hud-tutorial', root);
+    this.tutorial.className = 'hud-tutorial';
     this.tutorial.setAttribute('role', 'status');
     this.tutorial.setAttribute('aria-live', 'polite');
-    Object.assign(this.tutorial.style, {
-      position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
-      width: 'min(340px, 60vw)', padding: '4px 8px',
-      background: 'transparent', color: '#fff', textAlign: 'center',
-      fontSize: '13px', lineHeight: '1.35', textShadow: '0 1px 4px #000, 0 0 8px #0008',
-    });
     const topContainer = el('hud-top', root);
     this.island = el('hud-island', topContainer);
     const homeLabel = el('hud-island-home-label', this.island);
@@ -48,7 +43,7 @@ export class Hud {
     this.dbg = el('hud-debug', root);
     this.help = el('hud-help', root);
     this.help.innerHTML = [
-      '<ul><li>aim [hand offset]</li><li>power [hand size]</li><li>bump [fist]</li><li>set [point up]</li><li>spike [thumbs up]</li><li>serve [spike+nt+spike]</li><li>neutral [palm]</li>'
+      '<ul><li>aim [hand offset]</li><li>power [hand size]</li><li>bump [fist]</li><li>set [point up]</li><li>spike [thumbs up]</li><li>serve [spike+nt+spike]</li><li>neutral [palm]</li><li>go to menu [esc]</li>'
     ].join('<br>');
     this.dbg.style.display = 'none';
   }

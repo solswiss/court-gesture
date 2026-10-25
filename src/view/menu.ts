@@ -8,7 +8,6 @@ export class Menu {
   private overlay = document.createElement('div');
   private toggle = document.createElement('button');
   private title = document.createElement('h1');
-  private subtitle = document.createElement('p');
   private play = document.createElement('button');
   private restart = document.createElement('button');
   private open = false;
@@ -30,9 +29,8 @@ export class Menu {
     dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true');
     this.title.id = 'game-menu-title'; dialog.setAttribute('aria-labelledby', this.title.id);
     this.title.className = 'title-wordmark'; this.title.innerHTML = 'COURT<span>GESTURE</span>';
-    this.subtitle.className = 'title-subtitle';
     const rule = document.createElement('div'); rule.className = 'title-rule'; rule.setAttribute('aria-hidden', 'true');
-    const heading = document.createElement('header'); heading.append(this.title, rule, this.subtitle);
+    const heading = document.createElement('header'); heading.append(this.title, rule);
     this.navigation.setAttribute('aria-label', 'Game menu'); this.navigation.className = 'title-navigation';
     this.toggle.className = 'menu-toggle'; this.toggle.textContent = 'Menu'; this.toggle.onclick = () => this.show(!this.open);
     const button = (name: string, action: () => void) => {
@@ -118,7 +116,6 @@ export class Menu {
       this.started = false;
       this.lastPhase = this.game.phase;
       this.show(true);
-      this.subtitle.textContent = 'Tutorial complete! Ready to play?';
     }
     if (this.open) {
       this.beach.update(performance.now() / 1000, this.game.players[0].color, this.motion);
@@ -126,7 +123,6 @@ export class Menu {
     }
     if (this.game.phase === 'over' && this.lastPhase !== 'over') {
       this.started = true; this.show(true);
-      this.subtitle.textContent = `${this.game.winner === this.game.players[this.game.viewPlayerId].side ? 'Your team wins!' : 'Match finished'}  ${this.game.scores[0]} — ${this.game.scores[1]}`;
       if (!this.client) this.restart.focus();
     }
     if (this.lastPhase === 'over' && this.game.phase !== 'over') this.show(false);

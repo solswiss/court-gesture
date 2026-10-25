@@ -25,7 +25,8 @@ function blobShadow(): THREE.Mesh {
   const tex = canvasTex(64, 64, (g) => {
     const grd = g.createRadialGradient(32, 32, 2, 32, 32, 30);
     grd.addColorStop(0, 'rgba(107, 41, 0, 0.55)');
-    grd.addColorStop(1, 'rgba(174, 126, 6, 0.2)');
+    grd.addColorStop(.8, 'rgba(174, 126, 6, 0.2)');
+    grd.addColorStop(1, 'rgba(174, 126, 6, 0)');
     g.fillStyle = grd;
     g.fillRect(0, 0, 64, 64);
   });
@@ -242,27 +243,6 @@ export class World3D {
     this.sand = new SandParticles(this.scene);
     this.footsteps = game.players.map((p) => ({ x: p.pos.x, z: p.pos.z, distance: 0, foot: 1, grounded: p.grounded }));
     // Sandcastle just outside the left net post, with its original image proportions.
-    const castles: THREE.Sprite[] = [];
-    const castleWidth = 3;
-    const castleTexture = new THREE.TextureLoader().load('/sand-castle.png', (texture) => {
-      const height = castleWidth * texture.image.height / texture.image.width;
-      for (const castle of castles) castle.scale.set(castleWidth + 2, height + 2, 1);
-    });
-    castleTexture.colorSpace = THREE.SRGBColorSpace;
-    const castleMaterial = new THREE.SpriteMaterial({
-      map: castleTexture,
-      transparent: true,
-      depthWrite: false,
-    });
-    {
-      const castle = new THREE.Sprite(castleMaterial);
-      castle.center.set(0.5, 0);
-      castle.position.set(-(NET.halfW + 1.8) - 2, 0.02, 0.5);
-      castle.scale.set(castleWidth, castleWidth, 1);
-      castle.renderOrder = 1; // Draw after the transparent sand shelf and water.
-      castles.push(castle);
-      this.scene.add(castle);
-    }
     // Palm tree on the sand outside the right sideline.
     const palmHeight = 5.5;
     for (let i=0; i<3; ++i) {
@@ -459,24 +439,63 @@ export class World3D {
     const shoreFade = 3;
     const islandW = 220;
     const islandLen = 220;
-    const islandTexture = canvasTex(512, 512, (ctx) => {
+
+    // All sand uses the 32x32 /sand-texture.png (from public), repeated.
+    // sandTile is the world size (in court units) covered by one copy of the image; adjust to make the grain bigger or smaller.
+    const sandTile = 3;
+    // Each plane needs its own texture object (own repeat/offset). The offsets line the tiles up in world space,
+    // so the pattern stays continuous where the court meets the surrounding beach.
+    const sandTexture = (width: number, length: number): THREE.Texture => {
+      const texture = new THREE.TextureLoader().load('/sand-texture.png');
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(width / sandTile, length / sandTile);
+      texture.offset.set(
+        THREE.MathUtils.euclideanModulo((COURT.halfW - width / 2) / sandTile, 1),
+        THREE.MathUtils.euclideanModulo((COURT.halfLen - length / 2) / sandTile, 1),
+      );
+      texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+      return texture;
+    };
+
+    // Shoreline shape for a pixel of the 512x512 masks: opacity (1 = sand, 0 = water) and wetness (darker sand near the water).
+    const shore = (x: number, y: number) => {
+      const wx = ((x + 0.5) / 512 - 0.5) * islandW;
+      const wz = ((y + 0.5) / 512 - 0.5) * islandLen;
+      const distance = shorelineZ - wz;
+      const ripple = 0.18 * Math.sin(wx * 2.1 + wz * 0.8)
+        + 0.12 * Math.sin(wz * 2.8 - wx * 0.6);
+      const fade = THREE.MathUtils.clamp((distance + ripple) / shoreFade, 0, 1);
+      return {
+        opacity: 1 - fade * fade * (3 - 2 * fade),
+        wet: THREE.MathUtils.smoothstep(distance + ripple, -0.8, shoreFade),
+      };
+    };
+    // Opacity mask (three.js alphaMap reads the green channel). It is data, not colour, so it is not sRGB.
+    const islandMask = canvasTex(512, 512, (ctx) => {
       const pixels = ctx.createImageData(512, 512);
       for (let y = 0; y < 512; y++) {
         for (let x = 0; x < 512; x++) {
-          const wx = ((x + 0.5) / 512 - 0.5) * islandW;
-          const wz = ((y + 0.5) / 512 - 0.5) * islandLen;
-          const distance = shorelineZ - wz;
-          const ripple = 0.18 * Math.sin(wx * 2.1 + wz * 0.8)
-            + 0.12 * Math.sin(wz * 2.8 - wx * 0.6);
-          const fade = THREE.MathUtils.clamp((distance + ripple) / shoreFade, 0, 1);
-          const opacity = 1 - fade * fade * (3 - 2 * fade);
-          const wet = THREE.MathUtils.smoothstep(distance + ripple, -0.8, shoreFade);
-          const grain = 2 * Math.sin(x * 12.9898 + y * 78.233);
           const i = (y * 512 + x) * 4;
-          pixels.data[i] = 240 - wet * 55 + grain;
-          pixels.data[i + 1] = 216 - wet * 40 + grain;
-          pixels.data[i + 2] = 162 - wet * 20 + grain;
-          pixels.data[i + 3] = Math.round(opacity * 255);
+          const value = Math.round(shore(x, y).opacity * 255);
+          pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = value;
+          pixels.data[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(pixels, 0, 0);
+    });
+    islandMask.colorSpace = THREE.NoColorSpace;
+    // The old texture also darkened the sand near the water; a translucent brown overlay recreates that wet look.
+    const wetTexture = canvasTex(512, 512, (ctx) => {
+      const pixels = ctx.createImageData(512, 512);
+      for (let y = 0; y < 512; y++) {
+        for (let x = 0; x < 512; x++) {
+          const { opacity, wet } = shore(x, y);
+          const i = (y * 512 + x) * 4;
+          pixels.data[i] = 60;
+          pixels.data[i + 1] = 45;
+          pixels.data[i + 2] = 70;
+          pixels.data[i + 3] = Math.round(wet * opacity * 0.25 * 255);
         }
       }
       ctx.putImageData(pixels, 0, 0);
@@ -484,42 +503,28 @@ export class World3D {
     const island = new THREE.Mesh(
       new THREE.PlaneGeometry(islandW, islandLen),
       new THREE.MeshLambertMaterial({
-        map: islandTexture,
+        map: sandTexture(islandW, islandLen),
+        alphaMap: islandMask,
         transparent: true,
         depthWrite: false,
       }),
     );
     island.rotation.x = -Math.PI / 2;
     island.position.y = 0.002;
+    island.renderOrder = -1; // Beach first, then the wet overlay on top of it.
     this.scene.add(island);
+    const wetSand = new THREE.Mesh(
+      new THREE.PlaneGeometry(islandW, islandLen),
+      new THREE.MeshBasicMaterial({ map: wetTexture, transparent: true, depthWrite: false }),
+    );
+    wetSand.rotation.x = -Math.PI / 2;
+    wetSand.position.y = 0.003;
+    this.scene.add(wetSand);
 
-    // Tile fine grains and soft wind ripples at a consistent scale across the court.
-    const courtSand = canvasTex(256, 256, (ctx) => {
-      const pixels = ctx.createImageData(256, 256);
-      let seed = 7243;
-      for (let y = 0; y < 256; y++) {
-        for (let x = 0; x < 256; x++) {
-          seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-          const noise = seed / 4294967296;
-          const u = x / 256 * Math.PI * 2;
-          const v = y / 256 * Math.PI * 2;
-          const ripple = Math.sin(v * 8 + Math.sin(u * 2) * 0.8) * 3;
-          const shade = ripple + (noise - 0.5) * 22 + (noise < 0.015 ? -16 : 0);
-          const i = (y * 256 + x) * 4;
-          pixels.data[i] = 240 + shade;
-          pixels.data[i + 1] = 216 + shade;
-          pixels.data[i + 2] = 162 + shade;
-          pixels.data[i + 3] = 255;
-        }
-      }
-      ctx.putImageData(pixels, 0, 0);
-    });
-    courtSand.wrapS = courtSand.wrapT = THREE.RepeatWrapping;
-    courtSand.repeat.set(COURT.halfW * 2 / 3, COURT.halfLen * 2 / 3);
-    courtSand.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+    // Court sand: same texture, aligned with the beach tiles above.
     const court = new THREE.Mesh(
       new THREE.PlaneGeometry(COURT.halfW * 2, COURT.halfLen * 2),
-      new THREE.MeshLambertMaterial({ map: courtSand }),
+      new THREE.MeshLambertMaterial({ map: sandTexture(COURT.halfW * 2, COURT.halfLen * 2) }),
     );
     court.rotation.x = -Math.PI / 2;
     court.position.y = 0.005;
@@ -648,7 +653,7 @@ export class World3D {
     const b = g.ball;
     this.ball.position.set(b.pos.x, b.pos.y, b.pos.z);
     this.ballShadow.position.set(b.pos.x, 0.02, b.pos.z);
-    const sh = 1 / (.5 + Math.max(0, b.pos.y - BALL.radius) * 0.18);
+    const sh = 1 / (.7 + Math.max(0, b.pos.y - BALL.radius) * 0.18);
     this.ballShadow.scale.set(sh, sh, 1);
 
     // net wobble on contact
