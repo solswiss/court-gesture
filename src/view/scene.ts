@@ -257,7 +257,7 @@ export class World3D {
     {
       const castle = new THREE.Sprite(castleMaterial);
       castle.center.set(0.5, 0);
-      castle.position.set(-(NET.halfW + 1.8) - 2, 0.02, 0.5);
+      castle.position.set(-(NET.halfW + 1.8) - 6, 0.02, 0.5);
       castle.scale.set(castleWidth, castleWidth, 1);
       castle.renderOrder = 1; // Draw after the transparent sand shelf and water.
       castles.push(castle);
