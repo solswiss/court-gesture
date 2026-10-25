@@ -91,7 +91,7 @@ export class HandController implements Controller {
       this.scan();
     } catch (error) {
       this.stop();
-      this.status.textContent = `Camera unavailable: ${error instanceof Error ? error.message : String(error)} Keyboard controls still work. Try enabling again.`;
+      this.status.textContent = `Camera unavailable: ${error instanceof Error ? error.message : String(error)} Try enabling again.`;
     } finally {
       this.button.disabled = false;
     }
@@ -104,7 +104,7 @@ export class HandController implements Controller {
     this.video.srcObject = null;
     this.clear();
     this.result.textContent = 'Gesture: —';
-    this.status.textContent = 'Camera off. Keyboard controls active.';
+    this.status.textContent = 'Camera off. Enable camera to use gestures.';
     this.button.textContent = 'Enable camera';
     this.calibrate.disabled = true;
     this.resetDepth();
@@ -143,7 +143,7 @@ export class HandController implements Controller {
           this.result.textContent = 'Gesture: No hand detected';
           this.status.textContent = 'Show one hand to the camera.';
           if (!this.center) this.calibration = [];
-          this.depth.textContent = 'No hand detected — keyboard controls available';
+          this.depth.textContent = 'No hand detected — show one hand to the camera';
         } else {
           const x = 1 - (hand[0].x + hand[9].x) / 2;
           const y = (hand[0].y + hand[9].y) / 2;
