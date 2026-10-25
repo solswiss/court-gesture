@@ -30,7 +30,7 @@ export class Menu {
     dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true');
     this.title.id = 'game-menu-title'; dialog.setAttribute('aria-labelledby', this.title.id);
     const eyebrow = document.createElement('p'); eyebrow.className = 'title-eyebrow'; eyebrow.textContent = 'A LITTLE SUN. A LITTLE COMPETITION.';
-    this.title.className = 'title-wordmark'; this.title.innerHTML = 'SAND<span>VOLLEY</span>';
+    this.title.className = 'title-wordmark'; this.title.innerHTML = 'COURT<span>GESTURE</span>';
     this.subtitle.className = 'title-subtitle';
     const rule = document.createElement('div'); rule.className = 'title-rule'; rule.setAttribute('aria-hidden', 'true');
     const heading = document.createElement('header'); heading.append(eyebrow, this.title, rule, this.subtitle);

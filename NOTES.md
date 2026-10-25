@@ -1,4 +1,4 @@
-# Sand Volley — design notes
+# Court Gesture — design notes
 
 Small motion-controlled, multiplayer-ready sand volleyball. Punchy arcade physics (think *Just Volleyball*),
 3D low-poly look, CPU opponent (Wii Tennis style), 1v1 first and 2v2 later. Web game: TypeScript + Three.js + Vite.
