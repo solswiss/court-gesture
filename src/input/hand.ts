@@ -16,7 +16,7 @@ const GESTURES: Record<string, { label: string; action: HitType | null }> = {
 
 /** Calibrated gesture and shot-aim controller with keyboard fallback. */
 export class HandController implements Controller {
-  private fallback = new HumanController();
+  //private fallback = new HumanController();
   private recognizer?: GestureRecognizer;
   private stream?: MediaStream;
   private active = false;
@@ -204,27 +204,27 @@ export class HandController implements Controller {
 
   update(dt: number, game: Game, player: Player): PlayerInput {
     this.side = player.side;
-    const keyboard = this.fallback.update(dt);
-    keyboard.moveX = autoLateral(game, player);
-    keyboard.aim.x *= player.side;
-    if (!this.active) return keyboard;
+    //const keyboard = this.fallback.update(dt);
+    // keyboard.moveX = autoLateral(game, player);
+    // keyboard.aim.x *= player.side;
+    // if (!this.active) return keyboard;
     if (performance.now() - this.lastScan > 350) this.clear();
-    if (!this.tracking) return keyboard;
+    // if (!this.tracking) return keyboard;
     const input = emptyInput();
     input.moveX = autoLateral(game, player);
     input.aim = { ...this.handAim, x: this.handAim.x * player.side };
-    input.jump = keyboard.jump;
-    input.dive = this.queuedDive || keyboard.dive;
+    // input.jump = keyboard.jump;
+    // input.dive = this.queuedDive || keyboard.dive;
     this.queuedDive = false;
     input.action = this.queued;
     this.queued = null;
     if ((game.phase === 'ready' || game.phase === 'toss') && game.server === player && input.action === 'spike') input.action = 'serve';
     if (input.action) this.keyboardAim = false;
-    if (keyboard.action) {
-      input.action = keyboard.action;
-      this.keyboardAim = true;
-    }
-    if (this.keyboardAim) input.aim = keyboard.aim;
+    // if (keyboard.action) {
+    //   input.action = keyboard.action;
+    //   this.keyboardAim = true;
+    // }
+    // if (this.keyboardAim) input.aim = keyboard.aim;
     input.moveF = autoDepth(game, player);
     return input;
   }
