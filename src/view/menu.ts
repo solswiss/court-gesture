@@ -64,7 +64,7 @@ export class Menu {
     const help = document.createElement('p'); help.className = 'menu-help';
     help.textContent = 'Your player follows the ball automatically. Move your hand to aim. Enable the camera after starting, then hold steady to calibrate.';
     const keys = document.createElement('dl'); keys.className = 'title-controls';
-    for (const [action, input] of [['Bump', 'Fist / Q'], ['Set', 'Point up / E'], ['Spike', 'Thumbs up / F'], ['Serve', 'Thumbs up / X, twice'], ['Jump', 'Space'], ['Power', 'Hand size / Shift'], ['Aim', 'Hand offset / mouse / arrows'], ['Menu', 'Escape']]) {
+    for (const [action, input] of [['Bump', 'Fist'], ['Set', 'Point up'], ['Spike', 'Thumbs up'], ['Serve', 'Thumbs up, twice'], ['Power', 'Hand size'], ['Aim', 'Hand offset']]) {
       const term = document.createElement('dt'); term.textContent = action;
       const description = document.createElement('dd'); description.textContent = input; keys.append(term, description);
     }
@@ -95,6 +95,8 @@ export class Menu {
   }
   private screen(screen: HTMLElement, focus = true): void {
     for (const element of this.screens) element.hidden = element !== screen;
+    this.overlay.classList.toggle('customizing', screen === this.customize.element);
+    this.overlay.scrollTop = 0;
     if (focus) screen.querySelector<HTMLElement>('input, select, button')?.focus();
   }
   private show(open: boolean): void {
