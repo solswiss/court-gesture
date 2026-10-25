@@ -24,11 +24,13 @@ export class Room {
   private link = document.createElement('input');
   private join = document.createElement('input');
   private ended = false;
+  private matchStarted = false;
+  private panel = document.createElement('section');
 
   constructor(private game: Game, private slots: SlotController[], private local: Controller, parent: HTMLElement, private params: URLSearchParams) {
     this.isClient = params.has('room');
     this.online = this.isClient || params.get('net') === 'host';
-    const panel = document.createElement('section');
+    const panel = this.panel;
     panel.className = 'network-panel';
     panel.setAttribute('aria-label', 'Multiplayer');
     const title = document.createElement('strong');
@@ -198,11 +200,15 @@ export class Room {
   record(events: GameEvent[]): void { if (this.online && !this.isClient) this.events.push(...events); }
   render(now: number): GameEvent[] {
     if (this.isClient && this.connected && !this.ended) this.buffer.render(this.game, now);
+    if (this.game.phase === 'over') this.matchStarted = false;
+    else if (['toss', 'rally', 'point'].includes(this.game.phase)) this.matchStarted = true;
+    this.panel.hidden = this.matchStarted && !this.ended;
     return this.buffer.takeEvents();
   }
   private fail(message: string): void {
     if (this.ended) return;
     this.status.textContent = message;
+    this.panel.hidden = false;
     this.close();
   }
   close(): void {
