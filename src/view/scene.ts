@@ -94,23 +94,31 @@ class PlayerView {
   readonly group = new THREE.Group();
   readonly shadow = blobShadow();
   private arms: THREE.Mesh[] = [];
+  private legs: THREE.Mesh[] = [];
+  private walkTime = 0;
 
   constructor(private player: Player, color: number) {
     const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.32, 0.9, 4, 12),
+      new THREE.CapsuleGeometry(0.25, 0.27, 4, 12),
       new THREE.MeshLambertMaterial({ color }),
     );
-    body.position.y = 0.78;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 10), new THREE.MeshLambertMaterial({ color: 0xf0c9a0 }));
-    head.position.y = 1.78;
+    body.position.y = .95;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), new THREE.MeshLambertMaterial({ color: color }));
+    head.position.y = 1.76;
     this.group.add(body, head);
     for (const sx of [-1, 1]) {
-      const geo = new THREE.CapsuleGeometry(0.08, 0.5, 3, 8);
-      geo.translate(0, -0.3, 0); // pivot at the shoulder
-      const arm = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0xf0c9a0 }));
-      arm.position.set(sx * 0.4, 1.42, 0);
+      const arm_geo = new THREE.CapsuleGeometry(0.12, .05, 3, 8);
+      arm_geo.translate(0, -0.3, 0); // pivot at the shoulder
+      const arm = new THREE.Mesh(arm_geo, new THREE.MeshLambertMaterial({ color: color }));
+      arm.position.set(sx * 0.45, 1.1, 0);
       this.group.add(arm);
       this.arms.push(arm);
+      const leg_geo = new THREE.CapsuleGeometry(0.09, .7, 3, 8);
+      leg_geo.translate(0, -.7, 0); // pivot at the shoulder
+      const leg = new THREE.Mesh(leg_geo, new THREE.MeshLambertMaterial({ color: color }));
+      leg.position.set(sx * 0.12, 1.1, 0);
+      this.group.add(leg);
+      this.legs.push(leg);
     }
     this.group.rotation.y = player.side === 1 ? 0 : Math.PI; // face the net
   }
@@ -118,10 +126,28 @@ class PlayerView {
   update(): void {
     const p = this.player;
     this.group.position.set(p.pos.x, p.y, p.pos.z);
-    // Arms: raised forward/up for a moment on every swing (also on whiffs, so you can see the timing).
+    // Swing arm animation
     const a = p.swing / 0.28; // 1 -> 0
     const ang = a > 0 ? 2.7 * Math.sin(a * Math.PI) : 0;
     for (const arm of this.arms) arm.rotation.x = ang;
+    // Leg walk cycle
+    const isMoving = p.vx !== 0 || p.vz !== 0;
+    if (isMoving) {
+      const speed = Math.sqrt(p.vx * p.vx + p.vz * p.vz);
+      // Advance walk cycle timeline based on speed (adjust the 15.0 multiplier to change rhythm)
+      this.walkTime += speed * 3.0 * 0.016; 
+    } else {
+      // Smoothly return legs to a standing position when stopped
+      this.walkTime = THREE.MathUtils.lerp(this.walkTime, Math.round(this.walkTime / Math.PI) * Math.PI, 0.1);
+    }
+
+    // Swing angle amplitude (e.g., 0.6 radians max rotation forward and back)
+    const maxLegSwing = 0.6; 
+    
+    // Left leg swings forward while the right leg swings back
+    this.legs[0].rotation.x = Math.sin(this.walkTime) * maxLegSwing;
+    this.legs[1].rotation.x = -Math.sin(this.walkTime) * maxLegSwing;
+
     this.shadow.position.set(p.pos.x, 0.02, p.pos.z);
     const s = 1.1 / (1 + p.y * 0.3);
     this.shadow.scale.set(s, s, 1);
@@ -204,7 +230,7 @@ export class World3D {
     this.scene.add(this.net); 
 
     // players
-    this.views = game.players.map((p) => new PlayerView(p, p.side === 1 ? 0x2f6fdb : 0xe0453a));
+    this.views = game.players.map((p) => new PlayerView(p, p.side === 1 ? 0xfa5a50 : 0x3fbfff));
     for (const v of this.views) this.scene.add(v.group, v.shadow);
 
     // Camera-facing artwork; the simulation still uses BALL.radius for collisions.
