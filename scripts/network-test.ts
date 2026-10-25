@@ -1,11 +1,11 @@
 import { validAppearance } from '../src/appearance';
 import assert from 'node:assert/strict';
-import { SIM_DT } from '../src/config';
+import { COURT, SIM_DT } from '../src/config';
 import { CpuController } from '../src/input/cpu';
 import { makeRng } from '../src/rng';
 import { Game } from '../src/sim/game';
 import { emptyInput } from '../src/types';
-import { isSnapshot, applySnapshot, RemoteController, sanitizeInput, SlotController, snapshot, SnapshotBuffer } from '../src/net/state';
+import { controlledPlayerId, isSnapshot, applySnapshot, RemoteController, sanitizeInput, SlotController, snapshot, SnapshotBuffer } from '../src/net/state';
 
 const idle = { update: emptyInput };
 const game = new Game([idle, idle]);
@@ -64,6 +64,74 @@ slot.human = undefined;
 assert.equal(slot.update(SIM_DT, game, game.players[0]).moveX, -1, 'CPU resumes after disconnect');
 
 const four = new Game([idle, idle, idle, idle]);
+const teamSlots = Array.from({ length: 4 }, () => new SlotController({ update: () => ({ ...emptyInput(), action: 'spike', moveX: -1 }) }));
+const turns = new Game(teamSlots);
+for (const s of teamSlots) s.teamSlots = teamSlots;
+const driven: number[] = [];
+teamSlots[0].human = { update: (_dt, _g, p) => { driven.push(p.id); return { ...emptyInput(), moveX: 1 }; }, sampleContactAim: () => ({ x: 0.7, d: 0, power: 1 }) };
+turns.phase = 'rally';
+const stepSlots = () => teamSlots.map((s, i) => s.update(SIM_DT, turns, turns.players[i]));
+let inputs = stepSlots();
+assert.deepEqual(driven.splice(0), [0]);
+assert.equal(inputs[2].action, null, 'waiting teammate cannot hit automatically');
+turns.players[0].lastTouchTime = 1;
+turns.lastTouchSide = 1;
+turns.players[0].pending = { type: 'bump', age: 0 };
+inputs = stepSlots();
+assert.deepEqual(driven.splice(0), [2], 'control switches after the first teammate hits');
+assert.equal(turns.players[0].pending, null, 'clear the waiting player’s queued action');
+assert.equal(inputs[0].action, null);
+assert.ok(inputs[2].moveX < 0, 'active teammate runs toward the ball instead of repeating manual movement');
+assert.equal(teamSlots[2].sampleContactAim()?.x, 0.7, 'contact aim follows the human onto the teammate');
+turns.players[1].lastTouchTime = 2;
+assert.equal(controlledPlayerId(turns, [true, false, false, false], 0), 2, 'the next team touch stays with the waiting teammate');
+turns.players[2].lastTouchTime = 3;
+stepSlots();
+assert.deepEqual(driven.splice(0), [0], 'control switches back after the second teammate hits');
+teamSlots[2].human = idle;
+assert.equal(controlledPlayerId(turns, [true, false, true, false], 0), 0, 'two human teammates retain individual controls');
+assert.equal(controlledPlayerId(turns, [true, false, true, false], 2), 2);
+turns.restart();
+assert.equal(controlledPlayerId(turns, [true, false, false, false], 0), 0, 'a new serve resets control to the server');
+assert.equal(controlledPlayerId(turns, [true, true, false, false], 1), 1, 'receiving team starts with its owner');
+teamSlots[2].human = undefined;
+turns.phase = 'rally';
+turns.lastTouchSide = -1;
+turns.ball.pos = { x: 2.5, y: 4, z: -2 };
+turns.ball.vel = { x: 0, y: 2, z: 7 };
+turns.players[0].teleport(-3, 6);
+turns.players[2].teleport(2.5, 4);
+assert.equal(controlledPlayerId(turns, [true, false, false, false], 0), 2, 'nearest avatar to the landing zone receives');
+turns.players[0].teleport(2.5, 4);
+turns.players[2].teleport(-3, 6);
+assert.equal(controlledPlayerId(turns, [true, false, false, false], 0), 2, 'receiver stays committed while players move');
+turns.hitSerial++;
+assert.equal(controlledPlayerId(turns, [true, false, false, false], 0), 0, 'a new return selects the newly closest avatar');
+
+// Hold a ball above our court to isolate positioning over many simulation steps.
+turns.lastTouchSide = 1;
+turns.touchCount = 1;
+turns.players[0].lastTouchTime = turns.time;
+turns.ball.pos = { x: -3, y: 4, z: 2 };
+turns.ball.vel = { x: 0, y: 0, z: 0 };
+turns.ball.mode = 'held';
+turns.players[0].teleport(-1.8, 3.5);
+turns.players[2].teleport(1.8, 3.5);
+for (let tick = 0; tick < 600; tick++) {
+  turns.update(SIM_DT);
+  for (const p of [turns.players[0], turns.players[2]]) {
+    assert.ok(Math.abs(p.pos.x) < COURT.halfW && p.pos.z > 0 && p.pos.z < COURT.halfLen, 'both shared avatars stay on court');
+  }
+}
+assert.ok(Math.abs(turns.players[2].pos.x + 3) < 0.2, 'next hitter approaches the ball automatically with no camera');
+assert.ok(Math.abs(turns.players[0].pos.x + 1.8) < 0.2, 'waiting teammate holds its coverage position');
+assert.equal(turns.hitSerial, 1, 'waiting teammate never generates CPU hits');
+turns.ball.pos = { x: 20, y: 4, z: 20 };
+for (let tick = 0; tick < 600; tick++) turns.update(SIM_DT);
+assert.ok(turns.players[2].pos.x < COURT.halfW && turns.players[2].pos.z < COURT.halfLen, 'auto movement targets stay inside court for out balls');
+turns.ball.pos = { x: 0, y: 4, z: -4 };
+for (let tick = 0; tick < 600; tick++) turns.update(SIM_DT);
+assert.ok(Math.abs(turns.players[2].pos.x - 1.8) < 0.2 && Math.abs(turns.players[2].pos.z - 3.5) < 0.2, 'both avatars cover when the ball is headed to the other side');
 assert.deepEqual(four.players.map(p => p.side), [1, -1, 1, -1]);
 assert.notEqual(four.players[0].pos.x, four.players[2].pos.x);
 four.phase = 'rally';

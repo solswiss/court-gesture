@@ -38,7 +38,7 @@ export class Hud {
     this.dbg = el('hud-debug', root);
     this.help = el('hud-help', root);
     this.help.innerHTML = [
-      '<ul><li>jump [space]</li><li>dive [peace sign][C]</li><li>move [hand offset][WASD]</li><li>aim [hand offset][mouse][arrow keys]</li><li>power [hand size][hold shift]</li><li>bump [fist][Q]</li><li>set [point up][E]</li><li>spike [thumbs up][F]</li><li>serve [spike+nt+spike][X]</li><li>neutral [palm]</li><li>menu [Esc]</li><li>debug [`]</li><li>restart [enter]</li></ul>'
+      '<ul><li>jump [space]</li><li>dive [peace sign][C]</li><li>movement [automatic]</li><li>aim [hand offset][mouse][arrow keys]</li><li>power [hand size][hold shift]</li><li>bump [fist][Q]</li><li>set [point up][E]</li><li>spike [thumbs up][F]</li><li>serve [spike+nt+spike][X]</li><li>neutral [palm]</li><li>menu [Esc]</li><li>debug [`]</li><li>restart [enter]</li></ul>'
     ].join('<br>');
     this.dbg.style.display = 'none';
   }
@@ -83,6 +83,8 @@ export class Hud {
 
   private statusText(g: Game): string {
     switch (g.phase) {
+      case 'rally':
+        return g.players.length === 4 ? `Controlling P${g.viewPlayerId + 1}` : '';
       case 'ready':
         return g.server.id === g.viewPlayerId ? 'Your serve — thumbs up or X to toss; palm, then thumbs up to hit' : `P${g.server.id + 1} serving…`;
       case 'toss':

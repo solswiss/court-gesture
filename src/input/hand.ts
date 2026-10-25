@@ -4,7 +4,7 @@ import type { Player } from '../sim/player';
 import { emptyInput, type Aim, type HitType, type PlayerInput } from '../types';
 import { clamp } from '../util';
 import { HumanController } from './keyboard';
-import { assistedLateral, autoDepth, AimHistory, handAxis, OneEuroFilter } from './hand-signal';
+import { autoLateral, autoDepth, AimHistory, handAxis, OneEuroFilter } from './hand-signal';
 
 const GESTURES: Record<string, { label: string; action: HitType | null }> = {
   Closed_Fist: { label: 'Closed fist', action: 'bump' },
@@ -14,7 +14,7 @@ const GESTURES: Record<string, { label: string; action: HitType | null }> = {
   Open_Palm: { label: 'Open palm', action: null },
 };
 
-/** Calibrated hand joystick with camera-time aim history and keyboard fallback. */
+/** Calibrated gesture and shot-aim controller with keyboard fallback. */
 export class HandController implements Controller {
   private fallback = new HumanController();
   private recognizer?: GestureRecognizer;
@@ -39,7 +39,6 @@ export class HandController implements Controller {
   private side = 1;
   private depth = document.createElement('div');
   private calibrate = document.createElement('button');
-  private smooth = { x: 0, f: 0 };
   private video = document.createElement('video');
   private status = document.createElement('div');
   private result = document.createElement('div');
@@ -67,7 +66,7 @@ export class HandController implements Controller {
     this.buttonPanel.className = 'hand-button-panel';
     this.buttonPanel.append(this.button, this.calibrate);
     const help = document.createElement('small');
-    help.textContent = 'Hold your hand steady to calibrate. Small left/right motions steer; center your hand to auto-track the ball; forward/backward follows where the ball will land. Closer = more power. Peace sign: dive · fist: bump · point: set · thumbs up: spike/serve · palm: neutral. WASD, Space, Q/E/F/X still work.';
+    help.textContent = 'Hold your hand steady to calibrate. Players track the ball automatically. Hand offset aims your shot; closer = more power. Peace sign: dive · fist: bump · point: set · thumbs up: spike/serve · palm: neutral. Space, C, Q/E/F/X still work.';
     panel.append(title, this.video, this.result, this.status, this.depth, this.buttonPanel, help);
     parent.append(panel);
     window.addEventListener('pagehide', () => this.stop());
@@ -128,7 +127,6 @@ export class HandController implements Controller {
   private clear(): void {
     this.tracking = false;
     this.move = { x: 0, f: 0 };
-    this.smooth = { x: 0, f: 0 };
     this.queued = null;
     this.queuedDive = false;
     this.candidate = this.stable = '';
@@ -152,7 +150,7 @@ export class HandController implements Controller {
           this.result.textContent = 'Gesture: No hand detected';
           this.status.textContent = 'Show one hand to the camera.';
           if (!this.center) this.calibration = [];
-          this.depth.textContent = 'Depth: no hand — movement stopped';
+          this.depth.textContent = 'No hand detected — keyboard controls available';
         } else {
           const x = 1 - (hand[0].x + hand[9].x) / 2;
           const y = (hand[0].y + hand[9].y) / 2;
@@ -207,15 +205,13 @@ export class HandController implements Controller {
   update(dt: number, game: Game, player: Player): PlayerInput {
     this.side = player.side;
     const keyboard = this.fallback.update(dt);
-    keyboard.moveX *= player.side;
+    keyboard.moveX = autoLateral(game, player);
     keyboard.aim.x *= player.side;
     if (!this.active) return keyboard;
     if (performance.now() - this.lastScan > 350) this.clear();
     if (!this.tracking) return keyboard;
     const input = emptyInput();
-    const f = 1 - Math.exp(-dt * 28);
-    this.smooth.x += (this.move.x - this.smooth.x) * f;
-    input.moveX = keyboard.moveX || assistedLateral(game, player, this.smooth.x * player.side);
+    input.moveX = autoLateral(game, player);
     input.aim = { ...this.handAim, x: this.handAim.x * player.side };
     input.jump = keyboard.jump;
     input.dive = this.queuedDive || keyboard.dive;
