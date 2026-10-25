@@ -21,7 +21,7 @@ const app = document.getElementById('app')!;
 const local: Controller = params.has('demo') ? new CpuController(skill, makeRng(seed + 1)) : new HandController(app);
 const count = params.get('slots') === '4' ? 4 : 2;
 const slots = Array.from({ length: count }, (_, i) => new SlotController(new CpuController(skill, makeRng(seed + i + 2))));
-const game = new Game(slots, seed);
+const game = new Game(slots, seed, !params.has('demo'));
 const room = new Room(game, slots, local, app, params);
 
 const world = new World3D(app, game);

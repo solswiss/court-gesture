@@ -19,12 +19,22 @@ export class Hud {
   private hit: HTMLElement;
   private dbg: HTMLElement;
   private help: HTMLElement;
+  private tutorial: HTMLElement;
   private hitTimer = 0;
   private last = { score: '', status: '', touches: '' };
   private restart;
 
   constructor(parent: HTMLElement, private game: Game) {
     const root = el('hud', parent);
+    this.tutorial = el('hud-tutorial', root);
+    this.tutorial.setAttribute('role', 'status');
+    this.tutorial.setAttribute('aria-live', 'polite');
+    Object.assign(this.tutorial.style, {
+      position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
+      width: 'min(340px, 60vw)', padding: '4px 8px',
+      background: 'transparent', color: '#fff', textAlign: 'center',
+      fontSize: '13px', lineHeight: '1.35', textShadow: '0 1px 4px #000, 0 0 8px #0008',
+    });
     const topContainer = el('hud-top', root);
     this.island = el('hud-island', topContainer);
     const homeLabel = el('hud-island-home-label', this.island);
@@ -68,6 +78,20 @@ export class Hud {
   }
 
   update(g: Game, dt: number): void {
+    this.tutorial.hidden = !g.tutorial;
+    // Give the compact tutorial the top-center space normally used by the scoreboard.
+    this.island.parentElement!.style.visibility = g.tutorial ? 'hidden' : 'visible';
+    if (g.tutorial) {
+      const { step, count } = g.tutorial;
+      const move = g.tutorialMoves[step];
+      const gesture = ['Make a closed fist', 'Point one finger up', 'Give a thumbs up'][step];
+      const instruction = move === 'bump' ? `${gesture} as the ball flies over the net.`
+        : g.ball.mode === 'held' ? `${gesture} to release the ball and ${move}.`
+        : `Watch your ${move}!`;
+      const text = `Practice ${step + 1}/3: ${move.toUpperCase()} (${count}/4)\n${count === 4 ? 'Great! Watch your shot finish…' : instruction}\nOpen palm between attempts.`;
+      if (this.tutorial.textContent !== text) this.tutorial.textContent = text;
+      this.tutorial.style.whiteSpace = 'pre-line';
+    }
     const s = `${g.scores[0]} — ${g.scores[1]}`;
     if (s !== this.last.score) this.score.textContent = this.last.score = s;
 
@@ -87,6 +111,7 @@ export class Hud {
   }
 
   private statusText(g: Game): string {
+    if (g.tutorial) return 'Complete the warm-up to start the match';
     switch (g.phase) {
       case 'rally':
         return g.players.length === 4 ? `Controlling P${g.viewPlayerId + 1}` : '';
