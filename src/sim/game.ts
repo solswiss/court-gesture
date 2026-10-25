@@ -21,7 +21,7 @@ export class Game {
   readonly players: Player[];
   readonly rng: () => number;
   viewPlayerId = 0; // Local viewpoint; does not affect simulation rules.
-  readonly tutorialMoves = ['bump', 'set', 'spike'] as const;
+  readonly tutorialMoves = ['bump', 'set', 'spike', 'serve'] as const;
   tutorial: { step: number; count: number } | null = null;
   private practiceHit = false;
   private practiceTime = 0;
@@ -111,6 +111,10 @@ export class Game {
       // Hold the feed overhead until the player demonstrates the requested gesture.
       this.ball.pos = { ...contact, y: contact.y + 2.5 };
     }
+    if (move === 'serve') {
+      this.server = pl;
+      this.resetForServe(true);
+    }
     this.practiceArmed = false;
     this.practiceHit = false;
     this.practiceTime = 0;
@@ -123,15 +127,15 @@ export class Game {
     const pl = this.players[this.viewPlayerId];
     const input = this.controllers[pl.id].update(dt, this, pl);
     const move = this.tutorialMoves[practice.step];
-    if (this.ball.mode === 'held') {
+    if (this.ball.mode === 'held' && move !== 'serve') {
       if (input.action !== move) return;
       this.ball.mode = 'live';
       this.practiceArmed = true;
       this.events.push({ kind: 'toss' });
     }
-    this.practiceTime += dt;
+    if (this.phase !== 'ready') this.practiceTime += dt;
     pl.step(dt, { ...input, moveX: 0, moveF: 0, jump: false,
-      action: !this.practiceHit && (this.practiceArmed || input.action === move) ? move : null }, PLAYER_BOUNDS.netGap);
+      action: !this.practiceHit && (this.practiceArmed || input.action === move) ? move : null }, this.minDepth(pl));
     if (!this.practiceHit) {
       const serial = this.hitSerial;
       this.processAction(pl);
@@ -140,7 +144,8 @@ export class Game {
         practice.count++;
       }
     } else pl.pending = null;
-    this.stepBall(dt);
+    if (this.phase === 'ready') this.holdBall();
+    else this.stepBall(dt);
     if (this.ball.mode === 'dead') this.practiceLandedTime += dt;
     // Let the entire shot play out before feeding the next ball or starting the match.
     if (this.practiceLandedTime >= 0.7 || this.practiceTime >= 6) {
