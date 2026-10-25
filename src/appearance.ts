@@ -7,9 +7,9 @@ export function validAppearance(value: unknown): value is Appearance {
   return color(a.color);
 }
 export function loadAppearance(): Appearance {
-  try { const a: unknown = JSON.parse(localStorage.getItem('sand-volley-appearance') ?? 'null'); if (validAppearance(a)) return { ...a }; } catch { /* Storage may be unavailable. */ }
+  try { const a: unknown = JSON.parse(localStorage.getItem('court-gesture-appearance') ?? localStorage.getItem('sand-volley-appearance') ?? 'null'); if (validAppearance(a)) return { ...a }; } catch { /* Storage may be unavailable. */ }
   return { ...DEFAULT_APPEARANCE };
 }
 export function saveAppearance(a: Appearance): void {
-  try { localStorage.setItem('sand-volley-appearance', JSON.stringify(a)); } catch { /* Session customization still works. */ }
+  try { localStorage.setItem('court-gesture-appearance', JSON.stringify(a)); } catch { /* Session customization still works. */ }
 }
