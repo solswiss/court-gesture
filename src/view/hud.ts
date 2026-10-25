@@ -38,7 +38,7 @@ export class Hud {
     this.dbg = el('hud-debug', root);
     this.help = el('hud-help', root);
     this.help.innerHTML = [
-      '<ul><li>jump [space]</li><li>dive [peace sign][C]</li><li>movement [automatic]</li><li>aim [hand offset][mouse][arrow keys]</li><li>power [hand size][hold shift]</li><li>bump [fist][Q]</li><li>set [point up][E]</li><li>spike [thumbs up][F]</li><li>serve [spike+nt+spike][X]</li><li>neutral [palm]</li><li>menu [Esc]</li><li>debug [`]</li><li>restart [enter]</li></ul>'
+      '<ul><li>dive [peace sign]</li><li>aim [hand offset]</li><li>power [hand size]</li><li>bump [fist]</li><li>set [point up]</li><li>spike [thumbs up]</li><li>serve [spike+nt+spike]</li><li>neutral [palm]</li><li>menu [Esc]</li><li>restart [enter]</li></ul>'
     ].join('<br>');
     this.dbg.style.display = 'none';
   }

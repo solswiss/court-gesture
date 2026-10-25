@@ -49,8 +49,6 @@ export class HandController implements Controller {
     const panel = document.createElement('section');
     panel.className = 'hand-panel';
     panel.setAttribute('aria-label', 'Hand gesture controls');
-    const title = document.createElement('strong');
-    title.textContent = 'HAND CONTROLS';
     this.video.autoplay = true;
     this.video.muted = true;
     this.video.playsInline = true;
@@ -66,8 +64,7 @@ export class HandController implements Controller {
     this.buttonPanel.className = 'hand-button-panel';
     this.buttonPanel.append(this.button, this.calibrate);
     const help = document.createElement('small');
-    help.textContent = 'Hold your hand steady to calibrate. Players track the ball automatically. Hand offset aims your shot; closer = more power. Peace sign: dive · fist: bump · point: set · thumbs up: spike/serve · palm: neutral. Space, C, Q/E/F/X still work.';
-    panel.append(title, this.video, this.result, this.status, this.depth, this.buttonPanel, help);
+    panel.append(this.video, this.result, this.status, this.depth, this.buttonPanel, help);
     parent.append(panel);
     window.addEventListener('pagehide', () => this.stop());
   }
