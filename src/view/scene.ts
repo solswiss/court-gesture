@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BertFish } from './bert-fish';
+import { BallTrail } from './ball-trail';
 import { BALL, COURT, NET } from '../config';
 import { sampleTrajectory } from '../sim/ball';
 import type { Game } from '../sim/game';
@@ -8,6 +9,7 @@ import type { Player } from '../sim/player';
 import type { GameEvent, HitType } from '../types';
 
 const SPEC_COLORS: Record<HitType, number> = { bump: 0x44dd88, set: 0xffdd44, spike: 0xff5544, serve: 0xbb66ff };
+const PLAYER_COLORS = { 1: 0xfa5a50, [-1]: 0x3fbfff } as const;
 
 function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const c = document.createElement('canvas');
@@ -166,6 +168,7 @@ export class World3D {
   private sand: SandParticles;
   private footsteps: { x: number; z: number; distance: number; foot: number }[];
   private ball: THREE.Sprite;
+  private ballTrail: BallTrail;
   private ballShadow = blobShadow();
   private waterFallback?: THREE.CanvasTexture;
   private berts: BertFish[];
@@ -280,7 +283,7 @@ export class World3D {
     this.scene.add(this.net); 
 
     // players
-    this.views = game.players.map((p) => new PlayerView(p));
+    this.views = game.players.map((p) => new PlayerView(p, PLAYER_COLORS[p.side]));
     for (const v of this.views) this.scene.add(v.group, v.shadow);
 
     // Camera-facing artwork; the simulation still uses BALL.radius for collisions.
@@ -295,8 +298,10 @@ export class World3D {
     });
     bt.colorSpace = THREE.SRGBColorSpace;
     this.ball = new THREE.Sprite(new THREE.SpriteMaterial({ map: bt, transparent: true, depthWrite: false }));
+    this.ball.renderOrder = 2; // Keep the ball artwork in front of its fading trail.
     this.ball.scale.set(diameter, diameter, 1);
     this.scene.add(this.ball, this.ballShadow);
+    this.ballTrail = new BallTrail(this.scene);
 
     // aim reticle on the ground
     this.reticleMat = new THREE.MeshBasicMaterial({ color: 0x33ddff, transparent: true, opacity: 0.85, depthWrite: false });
@@ -526,9 +531,12 @@ export class World3D {
   }
 
   onEvent(ev: GameEvent): void {
+    if (ev.kind === 'toss' || ev.kind === 'retoss' || ev.kind === 'point' || ev.kind === 'over') this.ballTrail.reset();
     if (ev.kind === 'land' && !this.reducedMotion.matches) this.sand.emit(ev.x, ev.z, true);
     if (ev.kind === 'net') this.netShake = 0.3;
     if (ev.kind === 'hit') {
+      const hitter = this.game.players.find((player) => player.id === ev.player);
+      if (hitter) this.ballTrail.hit(PLAYER_COLORS[hitter.side]);
       const b = this.game.ball.pos;
       this.pulse.position.set(b.x, b.y, b.z);
       this.pulse.lookAt(this.camera.position);
@@ -618,6 +626,8 @@ export class World3D {
     // camera: fixed behind the near baseline, drifts a little toward the ball
     this.camera.position.set(b.pos.x * 0.12, 9.5, 17.5);
     this.camera.lookAt(b.pos.x * 0.05, 0.6, -1);
+    if (g.phase === 'ready') this.ballTrail.reset();
+    this.ballTrail.update(dt, b.pos, this.camera);
 
     // Fade the mesh and tape while the ball is on the human player's side.
     const ballOnYourSide = b.pos.z * human.side >= 0;
