@@ -5,6 +5,7 @@ import { makeRng } from './rng';
 import { Game, type Controller } from './sim/game';
 import { Hud } from './view/hud';
 import { World3D } from './view/scene';
+import { CrabVisitor } from './view/crab';
 
 // URL options:  ?skill=easy|normal|hard   ?demo (CPU vs CPU, to watch)   ?seed=123
 const params = new URLSearchParams(location.search);
@@ -19,6 +20,7 @@ const game = new Game([near, far], seed);
 
 const world = new World3D(app, game);
 const hud = new Hud(app);
+const crab = new CrabVisitor(app);
 
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Backquote') {
@@ -61,6 +63,7 @@ function frame(now: number): void {
   // Draw the contact frame once, then freeze visuals and timers together.
   hud.update(game, hitstop ? 0 : dt);
   world.update(hitstop ? 0 : dt, now / 1000);
+  crab.update(hitstop ? 0 : dt);
   world.render();
   requestAnimationFrame(frame);
 }
