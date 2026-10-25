@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SummerTrail } from './summer-trail';
 import { BALL, COURT, NET } from '../config';
 import { sampleTrajectory } from '../sim/ball';
 import type { Game } from '../sim/game';
@@ -164,6 +165,7 @@ export class World3D {
   private sand: SandParticles;
   private footsteps: { x: number; z: number; distance: number; foot: number }[];
   private ball: THREE.Sprite;
+  private summerTrail: SummerTrail;
   private ballShadow = blobShadow();
   private waterFallback?: THREE.CanvasTexture;
   private net: THREE.Group;
@@ -247,6 +249,7 @@ export class World3D {
     this.ball = new THREE.Sprite(new THREE.SpriteMaterial({ map: bt, transparent: true, depthWrite: false }));
     this.ball.scale.set(diameter, diameter, 1);
     this.scene.add(this.ball, this.ballShadow);
+    this.summerTrail = new SummerTrail(this.scene);
 
     // aim reticle on the ground
     this.reticleMat = new THREE.MeshBasicMaterial({ color: 0x33ddff, transparent: true, opacity: 0.85, depthWrite: false });
@@ -534,6 +537,7 @@ export class World3D {
     // ball
     const b = g.ball;
     this.ball.position.set(b.pos.x, b.pos.y, b.pos.z);
+    this.summerTrail.update(dt, this.ball.position, b.mode === 'live', this.reducedMotion.matches);
     this.ballShadow.position.set(b.pos.x, 0.02, b.pos.z);
     const sh = 0.7 / (1 + Math.max(0, b.pos.y - BALL.radius) * 0.18);
     this.ballShadow.scale.set(sh, sh, 1);
