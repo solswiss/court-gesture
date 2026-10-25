@@ -60,14 +60,14 @@ class SandParticles {
   emit(x: number, z: number, landing = false): void {
     // Keep dust on the island, rather than emitting it over the water.
     if (Math.abs(x) > COURT.halfW + 2.5 || Math.abs(z) > COURT.halfLen + 2.5) return;
-    for (let i = 0; i < (landing ? 18 : 3); i++) {
+    for (let i = 0; i < (landing ? 28 : 6); i++) {
       const p = this.particles[this.cursor++ % this.particles.length];
       const angle = Math.random() * Math.PI * 2;
       const speed = (0.25 + Math.random() * 0.65) * (landing ? 1.8 : 1);
       p.sprite.position.set(x + Math.cos(angle) * 0.09, 0.08, z + Math.sin(angle) * 0.09);
       p.velocity.set(Math.cos(angle) * speed, (landing ? 1.1 : 0.45) + Math.random() * 0.5, Math.sin(angle) * speed);
       p.duration = p.life = 0.3 + Math.random() * 0.25;
-      p.size = (landing ? 0.18 : 0.11) + Math.random() * 0.09;
+      p.size = (landing ? 0.35 : 0.22) + Math.random() * 0.09;
       p.sprite.scale.setScalar(p.size);
       p.sprite.material.opacity = 0.5;
       p.sprite.material.rotation = angle;
@@ -460,7 +460,7 @@ export class World3D {
       if ((ev.type === 'serve' || ev.type === 'spike') && !this.reducedMotion.matches) {
         this.serveImpact.position.set(b.x, b.y, b.z);
         this.serveImpactLife = 0.12;
-        this.impactNeedsFrame = true;
+        this.impactNeedsFrame = ev.type === 'serve'; // Spike hitstop is handled by the main loop.
       }
     }
   }
@@ -470,7 +470,7 @@ export class World3D {
     const g = this.game;
     const human = g.players[0];
 
-    // A small contact burst and two-frame visual hold; simulation keeps running.
+    // A small contact burst; serves use a visual hold, spikes pause the main loop.
     if (this.reducedMotion.matches) {
       this.serveImpactLife = 0;
       this.impactHoldUntil = 0;
