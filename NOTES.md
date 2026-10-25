@@ -22,7 +22,7 @@ URL options: `?skill=easy|normal|hard`, `?demo` (CPU vs CPU, to watch), `?seed=1
 | Space | jump | open palm pushed up |
 | Mouse (or arrow keys) | aim: x = left/right, up = deeper | hand offset at the moment of contact |
 | Q / E / F | bump / set / spike | fist / point / (gesture TBD) |
-| X, then X again | serve: toss, then hit | victory sign |
+| X, then X again | serve: toss, then hit | thumbs up |
 | Shift (held) | power: faster, flatter ball | hand speed |
 | ` (backtick) | debug: reach spheres, ball path, last-hit numbers | |
 
@@ -79,9 +79,9 @@ a dropped serve toss is a free re-toss; server must stay behind the end line unt
 | **1 (done)** | Court, bounds, net, rules, keyboard/mouse, CPU, solver |
 | **2 (implemented)** | MediaPipe `HandController`: `@mediapipe/tasks-vision` GestureRecognizer, calibration, one-euro filter, 2-3 frame gesture debounce, camera preview. Movement = automatic ball tracking; horizontal hand offset controls shot aim only. Aim = hand offset sampled from a ~200 ms buffer at contact. Depth cue = hand scale (wrist -> middle-finger base), not MediaPipe z. Keep the keyboard fallback. |
 | **3 (implemented; live network playtest pending)** | PeerJS (WebRTC) 1v1: host runs `Game`, clients send `PlayerInput`, host broadcasts snapshots at 20-30 Hz, clients interpolate. Then 4 slots for 2v2 with CPUs filling empty slots. Sim already uses a seeded RNG and fixed 120 Hz step. |
-| **4 (implemented)** | Juice: hit-stop, screen shake on spikes, sand puffs, ball trail, SFX, menus, difficulty. Dive if time allows. |
+| **4 (implemented)** | Juice: hit-stop, screen shake on spikes, sand puffs, ball trail, SFX, menus, difficulty. |
 
-Cut order if short on time: dive, 2v2, polish. Target: playable gesture game + online 1v1.
+Cut order if short on time: 2v2, polish. Target: playable gesture game + online 1v1.
 
 ## Known limits / next steps
 
@@ -115,8 +115,8 @@ Local games begin at a Play menu. Use the Menu button or Escape to pause/resume 
 
 Spikes have a 50 ms local hit-stop and a brief decaying camera shake. Online simulation stays continuous. Existing sand footsteps, ball landing puffs, colored ball trails and hit bursts are retained, with additional puffs when players land from a jump. Motion effects respect the operating system's reduced-motion preference and can also be switched off in the menu.
 
-Sound effects are synthesized locally with Web Audio: distinct hit sounds, serve toss, net, sand landing, point and match-ending cues. Audio unlocks after a click or key press; the menu has a mute toggle. No sound files need downloading. Camera/audio feel and menu layout still need a browser playtest. Dive uses a peace sign (MediaPipe Victory) or C. Hold for three recognition frames to trigger once; change gestures before repeating. During a rally, it lunges toward the predicted low-ball contact point for 0.3 seconds and automatically attempts a low bump with extra reach. Recovery slows movement briefly and the cooldown is 1.2 seconds. Dives are disabled during serving and while airborne. Dive state is included in multiplayer snapshots and its input is consumed once on the host.
+Sound effects are synthesized locally with Web Audio: distinct hit sounds, serve toss, net, sand landing, point and match-ending cues. Audio unlocks after a click or key press; the menu has a mute toggle. No sound files need downloading. Camera/audio feel and menu layout still need a browser playtest.
 
 ## Character customization
 
-Open Menu (Escape), then Customize character. Choose any character color, a pants color, and Beach shorts, Striped boardshorts, or Long pants. The screen previews the same 3D character used on court. Changes apply immediately and are saved in this browser when storage is available. Outfits remain after restarting a match. Online guests send validated appearance updates for their assigned slot; the host includes everyone's outfit in snapshots. All players must reload onto the current build (network protocol v3).
+Open Menu (Escape), then Customize character. Choose any character color, a pants color, and Beach shorts, Striped boardshorts, or Long pants. The screen previews the same 3D character used on court. Changes apply immediately and are saved in this browser when storage is available. Outfits remain after restarting a match. Online guests send validated appearance updates for their assigned slot; the host includes everyone's outfit in snapshots. All players must reload onto the current build (network protocol v4).

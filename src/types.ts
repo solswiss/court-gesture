@@ -26,7 +26,6 @@ export interface PlayerInput {
   moveX: number; // -1..1 world x
   moveF: number; // -1..1 toward the net (+) / away from it (-)
   jump: boolean;
-  dive?: boolean; // edge-triggered lunge; optional for older controllers
   action: HitType | null; // edge-triggered: set only on the tick it is pressed
   aim: Aim;
 }
@@ -35,7 +34,6 @@ export const emptyInput = (): PlayerInput => ({
   moveX: 0,
   moveF: 0,
   jump: false,
-  dive: false,
   action: null,
   aim: { x: 0, d: 0, power: 0.6 },
 });

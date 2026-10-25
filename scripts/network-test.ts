@@ -159,33 +159,6 @@ for (let tick = 0; tick < 120 * 180; tick++) {
 assert.ok(points > 0, '2v2 CPU match makes progress');
 console.log(`Network, interpolation, slot takeover and 2v2 checks passed (${points} points in three simulated minutes)`);
 
-const diver = new RemoteController();
-assert.ok(diver.receive(1, { ...emptyInput(), dive: true }, performance.now()));
-assert.equal(diver.update().dive, true);
-assert.equal(diver.update().dive, false, 'remote dive is consumed once');
-assert.equal(sanitizeInput({ ...emptyInput(), dive: 'yes' }), undefined);
-const diveInput = { ...emptyInput(), dive: true };
-const diveGame = new Game([{ update: () => ({ ...diveInput }) }, idle]);
-const divingPlayer = diveGame.players[0];
-diveGame.update(SIM_DT);
-assert.equal(divingPlayer.diveTime, 0, 'cannot dive during serve');
-diveGame.phase = 'rally';
-divingPlayer.teleport(0, 4);
-diveGame.ball.pos = { x: 0, y: 0.65, z: 2.5 };
-diveGame.ball.vel = { x: 0, y: -1, z: 0 };
-diveGame.ball.mode = 'live';
-diveGame.update(SIM_DT);
-assert.ok(divingPlayer.diveTime > 0);
-assert.ok(divingPlayer.pos.z < 4, 'lunge toward low ball');
-assert.equal(diveGame.hitSerial, 1, 'dive automatically attempts a low bump');
-const remaining = divingPlayer.diveCooldown;
-diveGame.update(SIM_DT);
-assert.ok(divingPlayer.diveCooldown < remaining, 'cooldown cannot be reset by repeated input');
-divingPlayer.teleport(0, 4);
-assert.equal(divingPlayer.diveTime, 0);
-assert.equal(divingPlayer.diveCooldown, 0);
-console.log('Dive, low-ball save, cooldown and multiplayer input checks passed');
-
 assert.ok(validAppearance({ color: 0x9944ff, pantsColor: 0xffffff, pants: 'boardshorts' }));
 assert.equal(validAppearance({ color: -1, pantsColor: 0, pants: 'shorts' }), false);
 assert.equal(validAppearance({ color: 0, pantsColor: 0, pants: 'invalid' }), false);
