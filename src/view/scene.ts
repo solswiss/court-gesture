@@ -99,7 +99,7 @@ export class PlayerView {
   private hands: { mesh: THREE.Mesh; side: number }[] = [];
   private legs: THREE.Mesh[] = [];
   private walkTime = 0;
-  private bodyMaterial = new THREE.MeshLambertMaterial();
+  private bodyMaterial = new THREE.MeshLambertMaterial({ transparent: true });
 
   constructor(private player: Player) {
     const body = new THREE.Mesh(
@@ -124,6 +124,7 @@ export class PlayerView {
       this.legs.push(leg);
     }
     this.group.rotation.y = player.side === 1 ? 0 : Math.PI; // face the net
+    this.group.traverse((object) => { if (object instanceof THREE.Mesh) object.renderOrder = 1; });
   }
 
   update(dt: number): void {
@@ -277,7 +278,7 @@ export class World3D {
       palm.center.set(0.5, 0);
       palm.position.set(COURT.halfW + 7-i*2, -5+3*i, 1);
       palm.scale.set(palmHeight, palmHeight, 1);
-      palm.renderOrder = 3-i;
+      palm.renderOrder = 10-i; // Foreground foliage covers fish and their splashes.
       this.scene.add(palm);
     }
     for (let i=0; i<3; ++i) {
@@ -299,7 +300,7 @@ export class World3D {
       palm.center.set(0.5, 0);
       palm.position.set(COURT.halfW - (15-i*2), -5+3*i, 1);
       palm.scale.set(palmHeight, palmHeight, 1);
-      palm.renderOrder = 3-i;
+      palm.renderOrder = 10-i;
       this.scene.add(palm);
     }
     this.net = this.buildNet();
@@ -536,10 +537,11 @@ export class World3D {
     tape.position.y = NET.top - 0.045;
     g.add(mesh, tape);
     for (const sx of [-1, 1]) {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, NET.top + 0.35, 10), new THREE.MeshLambertMaterial({ color: 0xffd34d }));
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, NET.top + 0.35, 10), new THREE.MeshLambertMaterial({ color: 0xffd34d, transparent: true }));
       post.position.set(sx * NET.halfW, (NET.top + 0.35) / 2, 0);
       g.add(post);
     }
+    g.traverse((object) => { if (object instanceof THREE.Mesh) object.renderOrder = 1; });
     return g;
   }
 

@@ -26,7 +26,7 @@ const room = new Room(game, slots, local, app, params);
 
 const world = new World3D(app, game);
 const hud = new Hud(app, game);
-const crab = new CrabVisitor(app);
+const crab = new CrabVisitor(app, world.scene, world.camera);
 const sound = new Sound();
 const menu = new Menu(app, game, room.online, room.isClient, skill, level => {
   for (const slot of slots) (slot.cpu as CpuController).setSkill(level);
