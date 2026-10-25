@@ -159,17 +159,15 @@ for (let tick = 0; tick < 120 * 180; tick++) {
 assert.ok(points > 0, '2v2 CPU match makes progress');
 console.log(`Network, interpolation, slot takeover and 2v2 checks passed (${points} points in three simulated minutes)`);
 
-assert.ok(validAppearance({ color: 0x9944ff, pantsColor: 0xffffff, pants: 'boardshorts' }));
-assert.equal(validAppearance({ color: -1, pantsColor: 0, pants: 'shorts' }), false);
-assert.equal(validAppearance({ color: 0, pantsColor: 0, pants: 'invalid' }), false);
-Object.assign(game.players[0], { color: 0x9944ff, pantsColor: 0x11aabb, pants: 'boardshorts' });
+assert.ok(validAppearance({ color: 0x9944ff }));
+assert.equal(validAppearance({ color: -1 }), false);
+assert.equal(validAppearance({ color: 'invalid' }), false);
+Object.assign(game.players[0], { color: 0x9944ff });
 const outfit = JSON.parse(JSON.stringify(snapshot(game, 99)));
 assert.ok(isSnapshot(outfit, 2));
 applySnapshot(replica, outfit);
 assert.equal(replica.players[0].color, 0x9944ff);
-assert.equal(replica.players[0].pants, 'boardshorts');
-assert.equal(replica.players[0].pantsColor, 0x11aabb);
 game.restart();
-assert.equal(game.players[0].pants, 'boardshorts', 'appearance survives restarting match');
-assert.equal(isSnapshot({ ...outfit, players: outfit.players.map(p => ({ ...p, pants: 'invalid' })) }, 2), false);
+assert.equal(game.players[0].color, 0x9944ff, 'appearance survives restarting match');
+assert.equal(isSnapshot({ ...outfit, players: outfit.players.map(p => ({ ...p, color: -1 })) }, 2), false);
 console.log('Character appearance validation, replication and restart checks passed');
