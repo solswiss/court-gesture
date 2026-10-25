@@ -243,6 +243,30 @@ export class World3D {
     this.sand = new SandParticles(this.scene);
     this.footsteps = game.players.map((p) => ({ x: p.pos.x, z: p.pos.z, distance: 0, foot: 1, grounded: p.grounded }));
     // Sandcastle just outside the left net post, with its original image proportions.
+<<<<<<< HEAD
+=======
+    const castles: THREE.Sprite[] = [];
+    const castleWidth = 3;
+    const castleTexture = new THREE.TextureLoader().load('/sand-castle.png', (texture) => {
+      const height = castleWidth * texture.image.height / texture.image.width;
+      for (const castle of castles) castle.scale.set(castleWidth + 2, height + 2, 1);
+    });
+    castleTexture.colorSpace = THREE.SRGBColorSpace;
+    const castleMaterial = new THREE.SpriteMaterial({
+      map: castleTexture,
+      transparent: true,
+      depthWrite: false,
+    });
+    {
+      const castle = new THREE.Sprite(castleMaterial);
+      castle.center.set(0.5, 0);
+      castle.position.set(-(NET.halfW + 1.8) - 6, 0.02, 0.5);
+      castle.scale.set(castleWidth, castleWidth, 1);
+      castle.renderOrder = 1; // Draw after the transparent sand shelf and water.
+      castles.push(castle);
+      this.scene.add(castle);
+    }
+>>>>>>> 4638e2b051b2c345476837e8d86f30b6aaaee4d4
     // Palm tree on the sand outside the right sideline.
     const palmHeight = 5.5;
     for (let i=0; i<3; ++i) {

@@ -367,7 +367,7 @@ function fly(from: Vec3, vel: Vec3): { net: boolean; land: { x: number; z: numbe
       if (move === 'bump') check('bump feed clears the net', !events.some(e => e.kind === 'net'));
     }
   }
-  check('tutorial requires twelve actual ball contacts', contacts === 12);
+  check('tutorial requires sixteen actual ball contacts including serves', contacts === 16);
   check('practice ends at a fresh serve with no points', g.tutorial === null && g.phase === 'ready' && g.scores.every(s => s === 0));
   g.restart();
   check('restart starts a match without tutorial', g.tutorial === null && g.phase === 'ready');
