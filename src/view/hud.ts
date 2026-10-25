@@ -69,6 +69,8 @@ export class Hud {
 
   update(g: Game, dt: number): void {
     this.tutorial.hidden = !g.tutorial;
+    // `hidden` alone is not reliable: a CSS `display` rule on .hud-tutorial overrides it, so also toggle display inline.
+    this.tutorial.style.display = g.tutorial ? '' : 'none';
     // Give the compact tutorial the top-center space normally used by the scoreboard.
     this.island.parentElement!.style.visibility = g.tutorial ? 'hidden' : 'visible';
     if (g.tutorial) {
@@ -84,6 +86,9 @@ export class Hud {
       const text = `Practice ${step + 1}/${g.tutorialMoves.length}: ${move.toUpperCase()} (${count}/4)\n${count === 4 ? 'Great! Watch your shot finish…' : instruction}\nOpen palm between attempts.`;
       if (this.tutorial.textContent !== text) this.tutorial.textContent = text;
       this.tutorial.style.whiteSpace = 'pre-line';
+    } else if (this.tutorial.textContent) {
+      // Clear the last tutorial message so it can't linger after the warm-up ends.
+      this.tutorial.textContent = '';
     }
     const s = `${g.scores[0]} — ${g.scores[1]}`;
     if (s !== this.last.score) this.score.textContent = this.last.score = s;

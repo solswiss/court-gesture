@@ -62,7 +62,7 @@ export class Sound {
     if (!this.enabled || this.context?.state !== 'running') return;
     switch (event.kind) {
       case 'hit': {
-        const pitch = { bump: 220, set: 420, spike: 130, serve: 290 }[event.type];
+        const pitch = { bump: 220, set: 420, spike: 130, serve: 290, restart: 0 }[event.type];
         this.tone(pitch, pitch * 0.45, 0.12, 0.5 + event.quality * 0.3, 0, 'triangle');
         this.puff(event.type === 'spike' ? 0.5 : 0.15, event.type === 'spike' ? 2200 : 900);
         break;

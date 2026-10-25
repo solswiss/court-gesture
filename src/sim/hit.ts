@@ -25,6 +25,7 @@ export const HIT_SPECS: Record<HitType, HitSpec> = {
   set: { forward: 0.2, height: 3, reach: 2, sweet: 2, tMin: 0.85, tMax: 1.25, tCap: 1.8 },
   spike: { forward: 0.3, height: 3, reach: 2, sweet: 2, tMin: 0.35, tMax: 0.65, tCap: 1.0 },
   serve: { forward: 0.3, height: 3, reach: 2, sweet: 2, tMin: 0.8, tMax: 1.4, tCap: 1.9 },
+  restart: { forward: 0, height: 0, reach: 0, sweet: 0, tMin: 0, tMax: 0, tCap: 0 },
 };
 
 export interface Actor {

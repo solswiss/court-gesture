@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: './',
+  base: './howdyhack-vball/',
   server: { host: true },
 });
