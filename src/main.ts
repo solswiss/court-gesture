@@ -33,7 +33,7 @@ const menu = new Menu(app, game, room.online, room.isClient, skill, level => {
   if (local instanceof CpuController) local.setSkill(level);
   const url = new URL(location.href); url.searchParams.set('skill', level); history.replaceState(null, '', url);
 }, enabled => sound.setEnabled(enabled), enabled => { world.effectsEnabled = enabled; },
-() => { local.update(0, game, game.players[game.viewPlayerId]); });
+() => { local.update(0, game, game.players[game.viewPlayerId]); }, appearance => room.customize(appearance));
 
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLElement && (e.target.isContentEditable || e.target.closest('input, textarea, select, button'))) return;

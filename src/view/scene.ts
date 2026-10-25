@@ -93,32 +93,39 @@ class SandParticles {
   }
 }
 
-class PlayerView {
+export class PlayerView {
   readonly group = new THREE.Group();
   readonly shadow = blobShadow();
   private hands: { mesh: THREE.Mesh; side: number }[] = [];
   private legs: THREE.Mesh[] = [];
   private walkTime = 0;
+  private bodyMaterial = new THREE.MeshLambertMaterial();
+  private pantsMaterial = new THREE.MeshLambertMaterial();
+  private clothing: THREE.Mesh[] = [];
+  private stripes: THREE.Mesh[] = [];
 
   constructor(private player: Player) {
-    const color: string = `#${player.color.toString(16).padStart(6, '0')}`;
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.25, 0.27, 4, 12),
-      new THREE.MeshLambertMaterial({ color }),
+      this.bodyMaterial,
     );
     body.position.y = .95;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), new THREE.MeshLambertMaterial({ color: color }));
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), this.bodyMaterial);
     head.position.y = 1.76;
     this.group.add(body, head);
     for (const sx of [-1, 1]) {
-      const material = new THREE.MeshLambertMaterial({ color });
+      const material = this.bodyMaterial;
       const hand = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), material);
       this.group.add(hand);
       this.hands.push({ mesh: hand, side: sx });
       const leg_geo = new THREE.CapsuleGeometry(0.09, .7, 3, 8);
       leg_geo.translate(0, -.7, 0); // pivot at the shoulder
-      const leg = new THREE.Mesh(leg_geo, new THREE.MeshLambertMaterial({ color: color }));
+      const leg = new THREE.Mesh(leg_geo, this.bodyMaterial);
       leg.position.set(sx * 0.12, 1.1, 0);
+      const cloth = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1, 12), this.pantsMaterial);
+      const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.124, 0.124, 0.045, 12), new THREE.MeshLambertMaterial({ color: 0xfff5dd }));
+      leg.add(cloth, stripe);
+      this.clothing.push(cloth); this.stripes.push(stripe);
       this.group.add(leg);
       this.legs.push(leg);
     }
@@ -127,6 +134,15 @@ class PlayerView {
 
   update(dt: number): void {
     const p = this.player;
+    this.bodyMaterial.color.setHex(p.color);
+    this.pantsMaterial.color.setHex(p.pantsColor);
+    const length = p.pants === 'pants' ? 0.78 : p.pants === 'boardshorts' ? 0.48 : 0.28;
+    this.clothing.forEach((cloth, i) => {
+      cloth.scale.y = length;
+      cloth.position.y = -0.25 - length / 2;
+      this.stripes[i].visible = p.pants === 'boardshorts';
+      this.stripes[i].position.y = -0.25 - length + 0.07;
+    });
     this.group.position.set(p.pos.x, p.y, p.pos.z);
     this.group.rotation.x = p.diveTime > 0 ? -1.1 * Math.sin(Math.PI * p.diveTime / 0.3) : 0;
     const progress = 1 - THREE.MathUtils.clamp(p.swing / 0.28, 0, 1);

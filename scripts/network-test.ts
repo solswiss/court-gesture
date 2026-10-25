@@ -1,3 +1,4 @@
+import { validAppearance } from '../src/appearance';
 import assert from 'node:assert/strict';
 import { SIM_DT } from '../src/config';
 import { CpuController } from '../src/input/cpu';
@@ -116,3 +117,18 @@ divingPlayer.teleport(0, 4);
 assert.equal(divingPlayer.diveTime, 0);
 assert.equal(divingPlayer.diveCooldown, 0);
 console.log('Dive, low-ball save, cooldown and multiplayer input checks passed');
+
+assert.ok(validAppearance({ color: 0x9944ff, pantsColor: 0xffffff, pants: 'boardshorts' }));
+assert.equal(validAppearance({ color: -1, pantsColor: 0, pants: 'shorts' }), false);
+assert.equal(validAppearance({ color: 0, pantsColor: 0, pants: 'invalid' }), false);
+Object.assign(game.players[0], { color: 0x9944ff, pantsColor: 0x11aabb, pants: 'boardshorts' });
+const outfit = JSON.parse(JSON.stringify(snapshot(game, 99)));
+assert.ok(isSnapshot(outfit, 2));
+applySnapshot(replica, outfit);
+assert.equal(replica.players[0].color, 0x9944ff);
+assert.equal(replica.players[0].pants, 'boardshorts');
+assert.equal(replica.players[0].pantsColor, 0x11aabb);
+game.restart();
+assert.equal(game.players[0].pants, 'boardshorts', 'appearance survives restarting match');
+assert.equal(isSnapshot({ ...outfit, players: outfit.players.map(p => ({ ...p, pants: 'invalid' })) }, 2), false);
+console.log('Character appearance validation, replication and restart checks passed');

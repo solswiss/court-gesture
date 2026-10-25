@@ -1,9 +1,10 @@
+import { loadAppearance, saveAppearance, validAppearance, type Appearance } from '../appearance';
 import Peer, { type DataConnection } from 'peerjs';
 import type { Controller, Game } from '../sim/game';
 import type { GameEvent } from '../types';
 import { isSnapshot, RemoteController, SlotController, SnapshotBuffer, snapshot, type Snapshot } from './state';
 
-const VERSION = 2;
+const VERSION = 3;
 interface Guest { connection: DataConnection; slot: number; remote: RemoteController; heard: number }
 
 export class Room {
@@ -25,6 +26,7 @@ export class Room {
   private join = document.createElement('input');
   private ended = false;
   private matchStarted = false;
+  private appearance = loadAppearance();
   private panel = document.createElement('section');
 
   constructor(private game: Game, private slots: SlotController[], private local: Controller, parent: HTMLElement, private params: URLSearchParams) {
@@ -65,10 +67,19 @@ export class Room {
     panel.append(title, this.status, this.roster, one, two, this.join, size, joinButton, this.link);
     if (this.online) panel.append(leave);
     parent.append(panel);
-    if (!this.isClient) this.slots[0].human = local;
+    if (!this.isClient) { this.slots[0].human = local; Object.assign(game.players[0], this.appearance); }
     if (this.online) this.start();
     else this.updateRoster();
     window.addEventListener('pagehide', () => this.close());
+  }
+
+  customize(appearance: Appearance): void {
+    if (!validAppearance(appearance)) return;
+    this.appearance = { ...appearance };
+    saveAppearance(this.appearance);
+    if (this.isClient) {
+      if (this.connected && this.connection) this.send(this.connection, { kind: 'appearance', appearance: this.appearance });
+    } else Object.assign(this.game.players[0], this.appearance);
   }
 
   private button(label: string, click: () => void): HTMLButtonElement {
@@ -131,7 +142,8 @@ export class Room {
     c.on('data', data => {
       const guest = this.guests.get(c.peer);
       if (!guest || guest.connection !== c || !data || typeof data !== 'object') return;
-      const m = data as { kind?: string; seq?: number; input?: unknown };
+      const m = data as { kind?: string; seq?: number; input?: unknown; appearance?: unknown };
+      if (m.kind === 'appearance' && validAppearance(m.appearance)) Object.assign(this.game.players[guest.slot], m.appearance);
       if (m.kind === 'input' && guest.remote.receive(m.seq!, m.input, performance.now())) guest.heard = performance.now();
     });
     const remove = () => {
@@ -159,6 +171,7 @@ export class Room {
       }
       this.game.viewPlayerId = Number(m.slot);
       this.connected = true;
+      if (this.connection) this.send(this.connection, { kind: 'appearance', appearance: this.appearance });
       this.status.textContent = `Connected as P${this.game.viewPlayerId + 1} · ${this.game.players[this.game.viewPlayerId].side === 1 ? 'home' : 'away'}`;
     }
     if (m.kind === 'roster' && Array.isArray(m.names)) this.roster.textContent = m.names.map(String).join(' · ');
