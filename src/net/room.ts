@@ -2,7 +2,7 @@ import { loadAppearance, saveAppearance, validAppearance, type Appearance } from
 import Peer, { type DataConnection } from 'peerjs';
 import type { Controller, Game } from '../sim/game';
 import type { GameEvent } from '../types';
-import { isSnapshot, RemoteController, SlotController, SnapshotBuffer, snapshot, type Snapshot } from './state';
+import { controlledPlayerId, isSnapshot, RemoteController, SlotController, SnapshotBuffer, snapshot, type Snapshot } from './state';
 
 const VERSION = 3;
 interface Guest { connection: DataConnection; slot: number; remote: RemoteController; heard: number }
@@ -28,10 +28,13 @@ export class Room {
   private matchStarted = false;
   private appearance = loadAppearance();
   private panel = document.createElement('section');
+  private owner = 0;
+  private humans: boolean[] = [];
 
   constructor(private game: Game, private slots: SlotController[], private local: Controller, parent: HTMLElement, private params: URLSearchParams) {
     this.isClient = params.has('room');
     this.online = this.isClient || params.get('net') === 'host';
+    for (const slot of slots) slot.teamSlots = slots;
     const panel = this.panel;
     panel.className = 'network-panel';
     panel.setAttribute('aria-label', 'Multiplayer');
@@ -169,12 +172,16 @@ export class Room {
       if (m.version !== VERSION || m.slots !== this.slots.length || !Number.isInteger(m.slot) || Number(m.slot) < 1 || Number(m.slot) >= this.slots.length) {
         this.fail('Room size differs. Join using the host’s full invite link.'); this.connection?.close(); return;
       }
-      this.game.viewPlayerId = Number(m.slot);
+      this.owner = Number(m.slot);
+      this.game.viewPlayerId = this.owner;
       this.connected = true;
       if (this.connection) this.send(this.connection, { kind: 'appearance', appearance: this.appearance });
       this.status.textContent = `Connected as P${this.game.viewPlayerId + 1} · ${this.game.players[this.game.viewPlayerId].side === 1 ? 'home' : 'away'}`;
     }
-    if (m.kind === 'roster' && Array.isArray(m.names)) this.roster.textContent = m.names.map(String).join(' · ');
+    if (m.kind === 'roster' && Array.isArray(m.names)) {
+      this.roster.textContent = m.names.map(String).join(' · ');
+      this.humans = m.names.map(name => String(name).endsWith(': human'));
+    }
     if (m.kind === 'snapshot' && this.connected) {
       const s = data as Snapshot;
       if (!isSnapshot(s, this.slots.length)) return;
@@ -183,6 +190,7 @@ export class Room {
   }
   tick(dt: number): void {
     if (this.ended) return;
+    this.updateViewPlayer();
     if (this.isClient) {
       if (!this.connected) {
         if (this.lastHost && performance.now() - this.lastHost > 12000) this.fail('Host did not respond. Check the invite link and try again.');
@@ -211,8 +219,12 @@ export class Room {
     }
   }
   record(events: GameEvent[]): void { if (this.online && !this.isClient) this.events.push(...events); }
+  private updateViewPlayer(): void {
+    this.game.viewPlayerId = controlledPlayerId(this.game, this.isClient ? this.humans : this.slots.map(s => !!s.human), this.owner);
+  }
   render(now: number): GameEvent[] {
     if (this.isClient && this.connected && !this.ended) this.buffer.render(this.game, now);
+    this.updateViewPlayer();
     if (this.game.phase === 'over') this.matchStarted = false;
     else if (['toss', 'rally', 'point'].includes(this.game.phase)) this.matchStarted = true;
     this.panel.hidden = this.matchStarted && !this.ended;

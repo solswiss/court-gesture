@@ -18,7 +18,7 @@ URL options: `?skill=easy|normal|hard`, `?demo` (CPU vs CPU, to watch), `?seed=1
 
 | Input | Action | Future hand equivalent |
 |---|---|---|
-| WASD | move (W = toward net) | hand position relative to a calibrated center (joystick) |
+| Automatic | players track the ball sideways | hand position controls shot aim only |
 | Space | jump | open palm pushed up |
 | Mouse (or arrow keys) | aim: x = left/right, up = deeper | hand offset at the moment of contact |
 | Q / E / F | bump / set / spike | fist / point / (gesture TBD) |
@@ -77,7 +77,7 @@ a dropped serve toss is a free re-toss; server must stay behind the end line unt
 | Part | Goal |
 |---|---|
 | **1 (done)** | Court, bounds, net, rules, keyboard/mouse, CPU, solver |
-| **2 (implemented)** | MediaPipe `HandController`: `@mediapipe/tasks-vision` GestureRecognizer, calibration, one-euro filter, 2-3 frame gesture debounce, camera preview. Movement = horizontal hand offset from calibrated center, automatic forward/backward tracking (deadzone + smoothing, mirrored x). Aim = hand offset sampled from a ~200 ms buffer at contact. Depth cue = hand scale (wrist -> middle-finger base), not MediaPipe z. Keep the keyboard fallback. |
+| **2 (implemented)** | MediaPipe `HandController`: `@mediapipe/tasks-vision` GestureRecognizer, calibration, one-euro filter, 2-3 frame gesture debounce, camera preview. Movement = automatic ball tracking; horizontal hand offset controls shot aim only. Aim = hand offset sampled from a ~200 ms buffer at contact. Depth cue = hand scale (wrist -> middle-finger base), not MediaPipe z. Keep the keyboard fallback. |
 | **3 (implemented; live network playtest pending)** | PeerJS (WebRTC) 1v1: host runs `Game`, clients send `PlayerInput`, host broadcasts snapshots at 20-30 Hz, clients interpolate. Then 4 slots for 2v2 with CPUs filling empty slots. Sim already uses a seeded RNG and fixed 120 Hz step. |
 | **4 (implemented)** | Juice: hit-stop, screen shake on spikes, sand puffs, ball trail, SFX, menus, difficulty. Dive if time allows. |
 
@@ -87,15 +87,15 @@ Cut order if short on time: dive, 2v2, polish. Target: playable gesture game + o
 
 - Part 1 view layer is un-profiled; hit feel (T ranges, reach) wants a real playtest pass.
 - Net clearance, bounds and rules are covered by `npm test`; visuals, camera framing and input feel are not.
-- Network clients view the court from their own baseline; horizontal keyboard/hand movement and aim are mirrored for far-side players.
+- Network clients view the court from their own baseline; horizontal shot aim is mirrored for far-side players.
 
 ## Hand controller
 
-Enable the camera on localhost or HTTPS, then hold one hand steady at a comfortable center for 12 camera frames. Recalibrate resets the center and neutral hand size. The mirrored preview matches horizontal movement. Horizontal hand offset drives left/right movement and aim; vertical hand movement is ignored. Forward/backward movement automatically follows the predicted ball landing depth (or returns to receiving depth when the ball is on the other side). Serving stays manual; a deadzone, adaptive one-euro filters, and movement smoothing suppress jitter. The simulation samples the last 200 ms of filtered aim at actual contact, rather than locking aim when a gesture is armed.
+Enable the camera on localhost or HTTPS, then hold one hand steady at a comfortable center for 12 camera frames. Recalibrate resets the center and neutral hand size. The mirrored preview matches shot aim. Horizontal hand offset controls aim; vertical hand movement is ignored. Players track the ball automatically. Serving stays manual. The simulation samples the last 200 ms of filtered aim at actual contact, rather than locking aim when a gesture is armed.
 
-Fist = bump, pointing up = set, thumbs up = spike (or serve during toss/ready), open palm = neutral. Gestures require three consecutive recognition frames and trigger once per change; return to palm before repeating a hit. Wrist-to-middle-finger-base image distance sets power relative to calibrated size; MediaPipe z is unused. WASD and Space remain available; Q/E/F/X use keyboard/mouse aim. Camera off, calibration, missing hand, and stalled tracking fall back to keyboard/mouse. Recognition loads its WASM and model from the existing remote URLs.
+Fist = bump, pointing up = set, thumbs up = spike (or serve during toss/ready), open palm = neutral. Gestures require three consecutive recognition frames and trigger once per change; return to palm before repeating a hit. Wrist-to-middle-finger-base image distance sets power relative to calibrated size; MediaPipe z is unused. W/S and Space remain available; Q/E/F/X use keyboard/mouse aim. Camera off, calibration, missing hand, and stalled tracking fall back to keyboard/mouse. Recognition loads its WASM and model from the existing remote URLs.
 
-Lateral steering uses a stronger response curve for small hand movements and fast movement smoothing. With the hand centered, assistive tracking automatically moves sideways toward an incoming ball's predicted landing x and slows near the target. Hand steering overrides tracking when moving away and adds a boost when moving toward the ball. No lateral tracking runs during serves or while the ball is headed to the opponent's side. Keyboard A/D retains direct control, and shot aim keeps its original sensitivity.
+Sideways movement follows the incoming ball automatically, including with the camera off or tracking unavailable. Hand offset and A/D do not move avatars. Shot aim keeps its original sensitivity. In shared 2v2 teams, the closer avatar receives each return, teammates alternate subsequent touches, and the waiting avatar covers its half of the court.
 
 ## Multiplayer
 

@@ -56,7 +56,7 @@ export class AimHistory {
   }
 }
 
-/** Chase the predicted landing depth only; the player owns the lateral axis. */
+/** Chase the predicted landing depth. */
 export function autoDepth(game: Game, player: Player): number {
   if (game.phase !== 'rally') return 0;
   const landing = predictAt(game.ball.pos, game.ball.vel, BALL.radius);
@@ -68,19 +68,13 @@ export function autoDepth(game: Game, player: Player): number {
   return Math.abs(error) <= 0.12 ? 0 : -clamp(error / 0.6, -1, 1);
 }
 
-/** Track incoming balls automatically; deliberate steering always has priority. */
-export function assistedLateral(game: Game, player: Player, steer: number): number {
-  const manual = Math.abs(steer) < 0.01 ? 0
-    : Math.sign(steer) * Math.pow(clamp(Math.abs(steer) * 2.8, 0, 1), 0.45);
-  if (game.phase !== 'rally') return manual;
+/** Track incoming balls automatically, independently of hand position or keys. */
+export function autoLateral(game: Game, player: Player): number {
+  if (game.phase !== 'rally') return 0;
   const landing = predictAt(game.ball.pos, game.ball.vel, BALL.radius);
-  if (landing.z * player.side <= 0) return manual;
+  if (landing.z * player.side <= 0) return 0;
   const target = clamp(landing.x, -COURT.halfW - PLAYER_BOUNDS.xMargin, COURT.halfW + PLAYER_BOUNDS.xMargin);
   const error = target - player.pos.x;
   // Slow near the landing point to avoid oscillation across it.
-  const tracking = Math.abs(error) <= 0.15 ? 0 : clamp(error / 0.8, -0.85, 0.85);
-  if (manual === 0) return tracking;
-  // Never fight a player deliberately steering away from the predicted target.
-  if (manual * error <= 0) return manual;
-  return Math.sign(manual) * Math.min(1, Math.abs(manual) + Math.abs(tracking) * 0.45);
+  return Math.abs(error) <= 0.15 ? 0 : clamp(error / 0.8, -0.85, 0.85);
 }

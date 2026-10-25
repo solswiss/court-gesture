@@ -1,4 +1,7 @@
 import { validAppearance } from '../appearance';
+import { BALL, COURT, PLAYER_BOUNDS } from '../config';
+import { predictAt } from '../sim/ball';
+import { HIT_SPECS } from '../sim/hit';
 import type { Game, Controller } from '../sim/game';
 import type { Player } from '../sim/player';
 import type { GameEvent, PlayerInput } from '../types';
@@ -145,10 +148,74 @@ export class RemoteController implements Controller {
   }
 }
 
+const receivers = new WeakMap<Game, Map<number, { flight: string; player: number }>>();
+
+/** Pick a receiver once per incoming flight, then alternate for team touches. */
+export function controlledPlayerId(game: Game, humans: boolean[], owner: number): number {
+  if (game.players.length !== 4) return owner;
+  const teammate = (owner + 2) % 4;
+  if (humans[teammate]) return owner;
+  if ((game.phase === 'ready' || game.phase === 'toss') && game.server.side === game.players[owner].side) return game.server.id;
+  const a = game.players[owner], b = game.players[teammate];
+  if (game.phase === 'rally' && game.lastTouchSide !== a.side) {
+    let team = receivers.get(game);
+    if (!team) { team = new Map(); receivers.set(game, team); }
+    const flight = `${game.hitSerial}:${game.lastTouchSide}:${a.lastTouchTime}:${b.lastTouchTime}`;
+    const previous = team.get(a.side);
+    if (previous?.flight === flight) return previous.player;
+    const landing = predictAt(game.ball.pos, game.ball.vel, BALL.radius);
+    const distance = (p: Player) => Math.hypot(p.pos.x - landing.x, p.pos.z - landing.z);
+    const player = distance(b) < distance(a) ? teammate : owner;
+    team.set(a.side, { flight, player });
+    return player;
+  }
+  if (a.lastTouchTime === b.lastTouchTime) return owner;
+  return a.lastTouchTime > b.lastTouchTime ? teammate : owner;
+}
+
+/** Shared teams auto-position; the human supplies timing, hit type and aim. */
+function teamMovement(game: Game, player: Player, active: boolean, input: PlayerInput): PlayerInput {
+  if (game.phase !== 'rally') return input;
+  const landing = predictAt(game.ball.pos, game.ball.vel, BALL.radius);
+  let x = player.id < 2 ? -1.8 : 1.8;
+  let depth: number = COURT.halfLen - 3.5;
+  if (active && landing.z * player.side > 0) {
+    const touches = game.lastTouchSide === player.side ? game.touchCount : 0;
+    const type = input.action ?? player.pending?.type ?? (touches === 0 ? 'bump' : touches === 1 ? 'set' : 'spike');
+    const spec = HIT_SPECS[type];
+    const contact = predictAt(game.ball.pos, game.ball.vel, player.y + spec.height);
+    x = clamp(contact.x, -COURT.halfW + 0.3, COURT.halfW - 0.3);
+    depth = clamp(contact.z * player.side + spec.forward, PLAYER_BOUNDS.netGap, COURT.halfLen - 0.3);
+  }
+  const dx = x - player.pos.x, dz = depth - player.pos.z * player.side;
+  const distance = Math.hypot(dx, dz);
+  const speed = distance <= 0.12 ? 0 : Math.min(1, distance / 0.6);
+  return { ...input, moveX: distance ? dx / distance * speed : 0, moveF: distance ? -dz / distance * speed : 0 };
+}
+
 /** Slots retain CPU controllers so a departing player is replaced immediately. */
 export class SlotController implements Controller {
   human?: Controller;
+  teamSlots?: SlotController[];
+  private contactController?: Controller;
   constructor(readonly cpu: Controller) {}
-  update(dt: number, game: Game, player: Player): PlayerInput { return (this.human ?? this.cpu).update(dt, game, player); }
-  sampleContactAim() { return this.human?.sampleContactAim?.(); }
+  update(dt: number, game: Game, player: Player): PlayerInput {
+    const slots = this.teamSlots;
+    const teammate = slots?.[(player.id + 2) % 4];
+    const owner = this.human ? player.id : teammate?.human ? (player.id + 2) % 4 : -1;
+    if (game.players.length === 4 && slots && owner >= 0) {
+      const active = controlledPlayerId(game, slots.map(s => !!s.human), owner);
+      if (active === player.id) {
+        this.contactController = slots[owner].human;
+        return teamMovement(game, player, true, this.contactController!.update(dt, game, player));
+      }
+      this.contactController = undefined;
+      player.pending = null;
+      player.prevContactDist = Infinity;
+      return teamMovement(game, player, false, emptyInput());
+    }
+    this.contactController = this.human ?? this.cpu;
+    return this.contactController.update(dt, game, player);
+  }
+  sampleContactAim() { return this.contactController?.sampleContactAim?.(); }
 }

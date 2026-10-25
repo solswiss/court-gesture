@@ -17,7 +17,6 @@ const PREVENT = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRig
 
 /**
  * Keyboard + mouse controller. Stand-in for the future one-hand MediaPipe controller:
- *   hand position (movement joystick)  ->  WASD
  *   hand offset at contact (aim)       ->  mouse position (or arrow keys)
  *   gesture (which hit)                ->  Q/E/F/X   (or J/K/L/I)
  * Swap this class for a HandController that produces the same PlayerInput and nothing else changes.
@@ -61,7 +60,6 @@ export class HumanController implements Controller {
   update(dt: number): PlayerInput {
     const k = this.keys;
     const input = emptyInput();
-    input.moveX = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
     input.moveF = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0);
     input.jump = k.has('Space');
     input.dive = this.dive;
