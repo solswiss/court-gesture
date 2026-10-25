@@ -49,7 +49,7 @@ export class Hud {
     this.dbg = el('hud-debug', root);
     this.help = el('hud-help', root);
     this.help.innerHTML = [
-      '<ul><li>aim [hand offset]</li><li>power [hand size]</li><li>bump [fist]</li><li>set [point up]</li><li>spike [thumbs up]</li><li>serve [spike+nt+spike]</li><li>neutral [palm]</li></ul>'
+      '<ul><li>aim [hand offset]</li><li>power [hand size]</li><li>bump [fist]</li><li>set [point up]</li><li>spike [thumbs up]</li><li>serve [spike+nt+spike]</li><li>neutral [palm]</li><li>menu [Esc]</li></ul>'
     ].join('<br>');
     this.dbg.style.display = 'none';
     this.restart = document.createElement('button');
@@ -116,9 +116,9 @@ export class Hud {
       case 'rally':
         return g.players.length === 4 ? `Controlling P${g.viewPlayerId + 1}` : '';
       case 'ready':
-        return g.server.id === g.viewPlayerId ? 'Your serve — thumbs up to toss; palm, then thumbs up to hit' : `P${g.server.id + 1} serving…`;
+        return g.server.id === g.viewPlayerId ? 'Your serve — thumbs up or X to toss; palm, then thumbs up to hit' : `P${g.server.id + 1} serving…`;
       case 'toss':
-        return g.server.id === g.viewPlayerId ? 'Open palm, then thumbs up to serve' : '';
+        return g.server.id === g.viewPlayerId ? 'Open palm, then thumbs up to serve (or X)' : '';
       case 'point': {
         const who = g.lastPointWinner === g.players[g.viewPlayerId].side ? 'Your team scores' : 'Other team scores';
         return `${who} — ${g.message}`;
