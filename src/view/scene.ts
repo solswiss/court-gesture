@@ -96,7 +96,7 @@ class SandParticles {
 class PlayerView {
   readonly group = new THREE.Group();
   readonly shadow = blobShadow();
-  private arms: THREE.Mesh[] = [];
+  private arms: { upper: THREE.Mesh; forearm: THREE.Mesh; elbow: THREE.Mesh; hand: THREE.Mesh; side: number }[] = [];
   private legs: THREE.Mesh[] = [];
   private walkTime = 0;
 
@@ -110,12 +110,13 @@ class PlayerView {
     head.position.y = 1.76;
     this.group.add(body, head);
     for (const sx of [-1, 1]) {
-      const arm_geo = new THREE.CapsuleGeometry(0.12, .05, 3, 8);
-      arm_geo.translate(0, -0.3, 0); // pivot at the shoulder
-      const arm = new THREE.Mesh(arm_geo, new THREE.MeshLambertMaterial({ color: color }));
-      arm.position.set(sx * 0.45, 1.1, 0);
-      this.group.add(arm);
-      this.arms.push(arm);
+      const material = new THREE.MeshLambertMaterial({ color });
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.09, 1, 8), material);
+      const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 1, 8), material);
+      const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), material);
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), material);
+      this.group.add(upper, forearm, elbow, hand);
+      this.arms.push({ upper, forearm, elbow, hand, side: sx });
       const leg_geo = new THREE.CapsuleGeometry(0.09, .7, 3, 8);
       leg_geo.translate(0, -.7, 0); // pivot at the shoulder
       const leg = new THREE.Mesh(leg_geo, new THREE.MeshLambertMaterial({ color: color }));
@@ -126,22 +127,58 @@ class PlayerView {
     this.group.rotation.y = player.side === 1 ? 0 : Math.PI; // face the net
   }
 
-  update(): void {
+  update(dt: number): void {
     const p = this.player;
     this.group.position.set(p.pos.x, p.y, p.pos.z);
-    // Swing arm animation
-    const a = p.swing / 0.28; // 1 -> 0
-    const ang = a > 0 ? 2.7 * Math.sin(a * Math.PI) : 0;
-    for (const arm of this.arms) arm.rotation.x = ang;
+    const progress = 1 - THREE.MathUtils.clamp(p.swing / 0.28, 0, 1);
+    const weight = p.swing > 0 ? 1 - THREE.MathUtils.smoothstep(progress, 0.65, 1) : 0;
+    const up = new THREE.Vector3(0, 1, 0);
+    const segment = (mesh: THREE.Mesh, from: THREE.Vector3, to: THREE.Vector3) => {
+      mesh.position.copy(from).add(to).multiplyScalar(0.5);
+      const direction = to.clone().sub(from);
+      mesh.scale.y = direction.length();
+      mesh.quaternion.setFromUnitVectors(up, direction.normalize());
+    };
+    for (const arm of this.arms) {
+      const sx = arm.side;
+      const shoulder = new THREE.Vector3(sx * 0.29, 1.23, 0);
+      const elbow = new THREE.Vector3(sx * 0.39, 0.98, 0);
+      const hand = new THREE.Vector3(sx * 0.4, 0.7, -0.04);
+      const targetElbow = elbow.clone(), targetHand = hand.clone();
+      if (p.lastType === 'bump') {
+        // Locked forearms form a platform, with both hands together toward the net.
+        targetElbow.set(sx * 0.2, 1.03, -0.32);
+        targetHand.set(sx * 0.065, 1.04, -0.65);
+      } else if (p.lastType === 'set') {
+        // Elbows out, fingers above the forehead; extend upward through the set.
+        const extension = Math.sin(progress * Math.PI) * 0.14;
+        targetElbow.set(sx * 0.43, 1.66 + extension, -0.12);
+        targetHand.set(sx * 0.14, 2.05 + extension, -0.2);
+      } else if (sx === 1) {
+        // Spike / overhead serve: one arm reaches up and whips down in front.
+        const swing = THREE.MathUtils.smoothstep(progress, 0.12, 0.7);
+        targetElbow.set(0.43, THREE.MathUtils.lerp(1.85, 1.25, swing), THREE.MathUtils.lerp(0.12, -0.3, swing));
+        targetHand.set(0.23, THREE.MathUtils.lerp(2.3, 0.85, swing), THREE.MathUtils.lerp(0.06, -0.65, swing));
+      } else {
+        targetElbow.set(-0.43, 1.28, -0.12);
+        targetHand.set(-0.38, 1.48, -0.35);
+      }
+      elbow.lerp(targetElbow, weight);
+      hand.lerp(targetHand, weight);
+      segment(arm.upper, shoulder, elbow);
+      segment(arm.forearm, elbow, hand);
+      arm.elbow.position.copy(elbow);
+      arm.hand.position.copy(hand);
+    }
     // Leg walk cycle
     const isMoving = p.vx !== 0 || p.vz !== 0;
     if (isMoving) {
       const speed = Math.sqrt(p.vx * p.vx + p.vz * p.vz);
       // Advance walk cycle timeline based on speed (adjust the 15.0 multiplier to change rhythm)
-      this.walkTime += speed * 3.0 * 0.016; 
+      this.walkTime += speed * 3.0 * dt;
     } else {
       // Smoothly return legs to a standing position when stopped
-      this.walkTime = THREE.MathUtils.lerp(this.walkTime, Math.round(this.walkTime / Math.PI) * Math.PI, 0.1);
+      this.walkTime = THREE.MathUtils.damp(this.walkTime, Math.round(this.walkTime / Math.PI) * Math.PI, 7, dt);
     }
 
     // Swing angle amplitude (e.g., 0.6 radians max rotation forward and back)
@@ -545,7 +582,7 @@ export class World3D {
       this.serveImpact.material.rotation = progress * 0.2;
     }
 
-    for (const v of this.views) v.update();
+    for (const v of this.views) v.update(dt);
     this.sand.update(dt);
     for (let i = 0; i < g.players.length; i++) {
       const player = g.players[i];
