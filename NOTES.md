@@ -120,3 +120,9 @@ Sound effects are synthesized locally with Web Audio: distinct hit sounds, serve
 ## Character customization
 
 Open Menu (Escape), then Customize character. Choose any character color, a pants color, and Beach shorts, Striped boardshorts, or Long pants. The screen previews the same 3D character used on court. Changes apply immediately and are saved in this browser when storage is available. Outfits remain after restarting a match. Online guests send validated appearance updates for their assigned slot; the host includes everyone's outfit in snapshots. All players must reload onto the current build (network protocol v4).
+
+## Beach title screen
+
+The game opens on an animated 3D coast with the existing volleyball player, a volleyball, palm trees, gentle surf, and a warm horizon. The player gently bobs and reflects your saved character color. The right-side menu offers Play (Continue match after starting), Customize character, Options (difficulty, sound, motion effects), and How to play. New match appears after starting a match. Subscreens have Back buttons; Escape returns from a subscreen, then closes the menu. Arrow keys navigate the main menu and Tab stays inside the dialog. Reduced-motion preferences and the motion toggle stop the beach animation. Local gameplay stays paused behind the title screen.
+
+The title ocean has rippling water and curved foam waves rolling toward shore. Two small flocks of birds glide and flap across the sky. Both follow the menu motion toggle and system reduced-motion preference.
