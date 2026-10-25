@@ -79,11 +79,14 @@ export class Hud {
     if (g.tutorial) {
       const { step, count } = g.tutorial;
       const move = g.tutorialMoves[step];
-      const gesture = ['Make a closed fist', 'Point one finger up', 'Give a thumbs up'][step];
-      const instruction = move === 'bump' ? `${gesture} as the ball flies over the net.`
+      const gesture = ['Make a closed fist', 'Point one finger up', 'Give a thumbs up', 'Give a thumbs up'][step];
+      const instruction = move === 'serve'
+        ? g.phase === 'ready' ? 'Give a thumbs up to toss the ball.'
+          : g.phase === 'toss' ? 'Open your palm, then give a thumbs up to hit the toss.' : 'Watch your serve!'
+        : move === 'bump' ? `${gesture} as the ball flies over the net.`
         : g.ball.mode === 'held' ? `${gesture} to release the ball and ${move}.`
         : `Watch your ${move}!`;
-      const text = `Practice ${step + 1}/3: ${move.toUpperCase()} (${count}/4)\n${count === 4 ? 'Great! Watch your shot finish…' : instruction}\nOpen palm between attempts.`;
+      const text = `Practice ${step + 1}/${g.tutorialMoves.length}: ${move.toUpperCase()} (${count}/4)\n${count === 4 ? 'Great! Watch your shot finish…' : instruction}\nOpen palm between attempts.`;
       if (this.tutorial.textContent !== text) this.tutorial.textContent = text;
       this.tutorial.style.whiteSpace = 'pre-line';
     }
