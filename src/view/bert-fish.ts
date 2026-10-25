@@ -28,7 +28,7 @@ export class BertFish {
     this.routeStart.copy(this.position);
     this.chooseDestination();
     this.actionTime = randomBetween(0, this.actionDuration * 0.8);
-    const texture = new THREE.TextureLoader().load('/bert-fish.png');
+    const texture = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}bert-fish.png`);
     texture.colorSpace = THREE.SRGBColorSpace;
     // Flip the UVs rather than rotating the billboard away from the camera.
     texture.wrapS = THREE.RepeatWrapping;

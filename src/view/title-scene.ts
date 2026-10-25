@@ -75,7 +75,7 @@ export class TitleScene {
     this.palm(-5, 0, 1); this.palm(-10, -8, 0.8); this.palm(9, -14, 0.65);
     // Use the same camera-facing artwork as the match, without wrapping it around a sphere.
     const diameter = BALL.radius * 2 * 1.25;
-    const ballTexture = new THREE.TextureLoader().load('/ball.svg', texture => {
+    const ballTexture = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}ball.svg`, texture => {
       const aspect = texture.image.width / texture.image.height;
       ball.scale.set(diameter * Math.min(aspect, 1), diameter / Math.max(aspect, 1), 1);
     });
@@ -84,7 +84,7 @@ export class TitleScene {
     ball.scale.set(diameter, diameter, 1);
     ball.position.set(-1.35, diameter / 2, 1.7); ball.renderOrder = 2; this.scene.add(ball);
     const castleWidth = 3;
-    const castleTexture = new THREE.TextureLoader().load('/sand-castle.png', texture => {
+    const castleTexture = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}sand-castle.png`, texture => {
       castle.scale.set(castleWidth, castleWidth * texture.image.height / texture.image.width, 1);
     });
     castleTexture.colorSpace = THREE.SRGBColorSpace;

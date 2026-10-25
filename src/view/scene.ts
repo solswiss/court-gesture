@@ -245,7 +245,7 @@ export class World3D {
     // Palm tree on the sand outside the right sideline.
     const palmHeight = 5.5;
     for (let i=0; i<3; ++i) {
-      const palmTexture = new THREE.TextureLoader().load('/palm-tree.png', (texture) => {
+      const palmTexture = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}palm-tree.png`, (texture) => {
         palm.scale.set(palmHeight * texture.image.width / texture.image.height, palmHeight, 1);
       });
       palmTexture.colorSpace = THREE.SRGBColorSpace;
@@ -261,7 +261,7 @@ export class World3D {
       this.scene.add(palm);
     }
     for (let i=0; i<3; ++i) {
-      const palmTexture = new THREE.TextureLoader().load('/palm-tree.png', (texture) => {
+      const palmTexture = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}palm-tree.png`, (texture) => {
         // Set horizontal wrapping to repeat so mirroring behaves nicely
         texture.wrapS = THREE.RepeatWrapping;
         
@@ -291,7 +291,7 @@ export class World3D {
 
     // Camera-facing artwork; the simulation still uses BALL.radius for collisions.
     const diameter = BALL.radius * 2 * 1.25; // Visual size only; hitbox stays unchanged.
-    const bt = new THREE.TextureLoader().load('/ball.svg', (texture) => {
+    const bt = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}ball.svg`, (texture) => {
       const aspect = texture.image.width / texture.image.height;
       this.ball.scale.set(
         diameter * Math.min(aspect, 1),
@@ -420,7 +420,7 @@ export class World3D {
     };
     window.addEventListener('pointerdown', tryPlay);
     window.addEventListener('keydown', tryPlay);
-    video.src = '/wateranim1.mp4';
+    video.src = `${import.meta.env.BASE_URL}wateranim1.mp4`;
     video.load();
     tryPlay();
 
@@ -445,7 +445,7 @@ export class World3D {
     // Each plane needs its own texture object (own repeat/offset). The offsets line the tiles up in world space,
     // so the pattern stays continuous where the court meets the surrounding beach.
     const sandTexture = (width: number, length: number): THREE.Texture => {
-      const texture = new THREE.TextureLoader().load('/sand-texture.png');
+      const texture = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}sand-texture.png`);
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(width / sandTile, length / sandTile);

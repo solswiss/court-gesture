@@ -31,7 +31,7 @@ export class CrabVisitor {
     this.sprite.renderOrder = 0.5; // After beach/water, before players, net and ball.
     this.sprite.visible = false;
     scene.add(this.sprite);
-    this.video.src = '/crab.mp4';
+    this.video.src = `${import.meta.env.BASE_URL}crab.mp4`;
     this.video.muted = true;
     this.video.loop = true;
     this.video.playbackRate = 2;
