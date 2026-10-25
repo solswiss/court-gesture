@@ -21,19 +21,19 @@ const app = document.getElementById('app')!;
 const local: Controller = params.has('demo') ? new CpuController(skill, makeRng(seed + 1)) : new HandController(app);
 const count = params.get('slots') === '4' ? 4 : 2;
 const slots = Array.from({ length: count }, (_, i) => new SlotController(new CpuController(skill, makeRng(seed + i + 2))));
-const game = new Game(slots, seed);
+const game = new Game(slots, seed, !params.has('demo'));
 const room = new Room(game, slots, local, app, params);
 
 const world = new World3D(app, game);
 const hud = new Hud(app, game);
 const crab = new CrabVisitor(app, world.scene, world.camera);
 const sound = new Sound();
-// const menu = new Menu(app, game, room.online, room.isClient, skill, level => {
-//   for (const slot of slots) (slot.cpu as CpuController).setSkill(level);
-//   if (local instanceof CpuController) local.setSkill(level);
-//   const url = new URL(location.href); url.searchParams.set('skill', level); history.replaceState(null, '', url);
-// }, enabled => sound.setEnabled(enabled), enabled => { world.effectsEnabled = enabled; },
-// () => { local.update(0, game, game.players[game.viewPlayerId]); }, appearance => room.customize(appearance));
+const menu = new Menu(app, game, room.online, room.isClient, skill, level => {
+  for (const slot of slots) (slot.cpu as CpuController).setSkill(level);
+  if (local instanceof CpuController) local.setSkill(level);
+  const url = new URL(location.href); url.searchParams.set('skill', level); history.replaceState(null, '', url);
+}, enabled => sound.setEnabled(enabled), enabled => { world.effectsEnabled = enabled; },
+() => { local.update(0, game, game.players[game.viewPlayerId]); }, appearance => room.customize(appearance));
 
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLElement && (e.target.isContentEditable || e.target.closest('input, textarea, select, button'))) return;
@@ -56,13 +56,13 @@ function frame(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
-  // menu.update();
-  // if (menu.paused) {
-  //   acc = 0;
-  //   world.update(0, now / 1000); world.render();
-  //   requestAnimationFrame(frame);
-  //   return;
-  // }
+  menu.update();
+  if (menu.paused) {
+    acc = 0;
+    world.update(0, now / 1000); world.render();
+    requestAnimationFrame(frame);
+    return;
+  }
   acc += dt;
   let hitstop = false;
   // fixed-step sim (120 Hz) decoupled from render rate

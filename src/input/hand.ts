@@ -210,8 +210,10 @@ export class HandController implements Controller {
     // input.jump = keyboard.jump;
     input.action = this.queued;
     this.queued = null;
-    if ((game.phase === 'ready' || game.phase === 'toss') && game.server === player && input.action === 'spike') input.action = 'serve';
-    else if (input.action === 'restart') game.restart();
+    if (!game.tutorial) {
+      if ((game.phase === 'ready' || game.phase === 'toss') && game.server === player && input.action === 'spike') input.action = 'serve';
+      else if (input.action === 'restart') game.restart();
+    }
     if (input.action) this.keyboardAim = false;
     // if (keyboard.action) {
     //   input.action = keyboard.action;

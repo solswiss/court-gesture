@@ -493,9 +493,33 @@ export class World3D {
     island.position.y = 0.002;
     this.scene.add(island);
 
+    // Tile fine grains and soft wind ripples at a consistent scale across the court.
+    const courtSand = canvasTex(256, 256, (ctx) => {
+      const pixels = ctx.createImageData(256, 256);
+      let seed = 7243;
+      for (let y = 0; y < 256; y++) {
+        for (let x = 0; x < 256; x++) {
+          seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+          const noise = seed / 4294967296;
+          const u = x / 256 * Math.PI * 2;
+          const v = y / 256 * Math.PI * 2;
+          const ripple = Math.sin(v * 8 + Math.sin(u * 2) * 0.8) * 3;
+          const shade = ripple + (noise - 0.5) * 22 + (noise < 0.015 ? -16 : 0);
+          const i = (y * 256 + x) * 4;
+          pixels.data[i] = 240 + shade;
+          pixels.data[i + 1] = 216 + shade;
+          pixels.data[i + 2] = 162 + shade;
+          pixels.data[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(pixels, 0, 0);
+    });
+    courtSand.wrapS = courtSand.wrapT = THREE.RepeatWrapping;
+    courtSand.repeat.set(COURT.halfW * 2 / 3, COURT.halfLen * 2 / 3);
+    courtSand.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
     const court = new THREE.Mesh(
       new THREE.PlaneGeometry(COURT.halfW * 2, COURT.halfLen * 2),
-      new THREE.MeshLambertMaterial({ color: 0xf0d8a2 }),
+      new THREE.MeshLambertMaterial({ map: courtSand }),
     );
     court.rotation.x = -Math.PI / 2;
     court.position.y = 0.005;

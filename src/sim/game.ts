@@ -1,9 +1,9 @@
-import { COURT, PLAYER_BOUNDS, RULES } from '../config';
+import { BALL, COURT, PLAYER_BOUNDS, RULES } from '../config';
 import { makeRng } from '../rng';
 import type { Aim, GameEvent, HitType, Phase, PlayerInput, Side } from '../types';
 import { dist3, other } from '../util';
 import { Ball } from './ball';
-import { aimTarget, contactQuality, HIT_SPECS, idealPoint, resolveHit, type Target } from './hit';
+import { aimTarget, contactQuality, HIT_SPECS, idealPoint, resolveHit, solveVelocity, type Target } from './hit';
 import { Player } from './player';
 
 /** Anything that can drive a player: keyboard, CPU, (later) MediaPipe hand, network peer. */
@@ -21,6 +21,12 @@ export class Game {
   readonly players: Player[];
   readonly rng: () => number;
   viewPlayerId = 0; // Local viewpoint; does not affect simulation rules.
+  readonly tutorialMoves = ['bump', 'set', 'spike'] as const;
+  tutorial: { step: number; count: number } | null = null;
+  private practiceHit = false;
+  private practiceTime = 0;
+  private practiceLandedTime = 0;
+  private practiceArmed = false;
 
   phase: Phase = 'ready';
   phaseTimer = 0;
@@ -42,12 +48,14 @@ export class Game {
   constructor(
     private controllers: Controller[],
     seed = 1,
+    tutorialOnStart = false,
   ) {
     this.rng = makeRng(seed);
     if (controllers.length !== 2 && controllers.length !== 4) throw new Error('Game needs two or four controllers');
     this.players = controllers.map((_, id) => new Player(id, id % 2 === 0 ? 1 : -1, id % 2 === 0 ? 0xffaa00 : 0x00aaff));
     this.server = this.players[0];
     this.resetForServe(true);
+    if (tutorialOnStart) this.startTutorial();
   }
 
   player(side: Side): Player {
@@ -65,7 +73,8 @@ export class Game {
   }
 
   restart(): void {
-    console.debug('restarting')
+    this.events = [];
+    this.tutorial = null;
     this.scores = [0, 0];
     this.winner = null;
     this.lastPointWinner = null;
@@ -73,7 +82,86 @@ export class Game {
     this.resetForServe(true);
   }
 
+  startTutorial(): void {
+    this.restart();
+    this.tutorial = { step: 0, count: 0 };
+    this.feedPracticeBall();
+  }
+
+  private feedPracticeBall(): void {
+    if (!this.tutorial) return;
+    const pl = this.players[this.viewPlayerId];
+    const move = this.tutorialMoves[this.tutorial.step];
+    pl.teleport(0, pl.side * (move === 'spike' ? 2 : 4));
+    pl.pending = null;
+    pl.prevContactDist = Infinity;
+    pl.lastTouchTime = -10;
+    pl.lastType = move;
+    this.phase = 'rally';
+    this.touchCount = 0;
+    this.lastTouchSide = 0;
+    this.ball.reset();
+    const contact = idealPoint(pl.actor, HIT_SPECS[move]);
+    if (move === 'bump') {
+      this.ball.pos = { x: contact.x, y: 3, z: -pl.side * 4 };
+      this.ball.vel = solveVelocity(this.ball.pos, contact, 1.4, BALL.gravity);
+      this.ball.mode = 'live';
+      this.events.push({ kind: 'toss' });
+    } else {
+      // Hold the feed overhead until the player demonstrates the requested gesture.
+      this.ball.pos = { ...contact, y: contact.y + 2.5 };
+    }
+    this.practiceArmed = false;
+    this.practiceHit = false;
+    this.practiceTime = 0;
+    this.practiceLandedTime = 0;
+  }
+
+  private updatePractice(dt: number): void {
+    const practice = this.tutorial!;
+    this.time += dt;
+    const pl = this.players[this.viewPlayerId];
+    const input = this.controllers[pl.id].update(dt, this, pl);
+    const move = this.tutorialMoves[practice.step];
+    if (this.ball.mode === 'held') {
+      if (input.action !== move) return;
+      this.ball.mode = 'live';
+      this.practiceArmed = true;
+      this.events.push({ kind: 'toss' });
+    }
+    this.practiceTime += dt;
+    pl.step(dt, { ...input, moveX: 0, moveF: 0, jump: false,
+      action: !this.practiceHit && (this.practiceArmed || input.action === move) ? move : null }, PLAYER_BOUNDS.netGap);
+    if (!this.practiceHit) {
+      const serial = this.hitSerial;
+      this.processAction(pl);
+      if (this.hitSerial !== serial) {
+        this.practiceHit = true;
+        practice.count++;
+      }
+    } else pl.pending = null;
+    this.stepBall(dt);
+    if (this.ball.mode === 'dead') this.practiceLandedTime += dt;
+    // Let the entire shot play out before feeding the next ball or starting the match.
+    if (this.practiceLandedTime >= 0.7 || this.practiceTime >= 6) {
+      if (practice.count === 4) {
+        practice.step++;
+        practice.count = 0;
+        if (practice.step === this.tutorialMoves.length) {
+          this.tutorial = null;
+          this.resetForServe(true);
+          return;
+        }
+      }
+      this.feedPracticeBall();
+    }
+  }
+
   update(dt: number): void {
+    if (this.tutorial) {
+      this.updatePractice(dt);
+      return;
+    }
     this.time += dt;
 
     for (let i = 0; i < this.players.length; i++) {
@@ -101,6 +189,7 @@ export class Game {
 
   /** The hit type a UI should preview for this player right now. */
   previewType(pl: Player): HitType {
+    if (this.tutorial) return this.tutorialMoves[this.tutorial.step];
     if (this.phase === 'ready' || this.phase === 'toss') return 'serve';
     return pl.lastType === 'serve' ? 'bump' : pl.lastType;
   }
@@ -245,6 +334,7 @@ export class Game {
     const slack = this.ball.radius * 0.6; // touching the line counts as in
     const inCourt = Math.abs(x) <= COURT.halfW + slack && Math.abs(z) <= COURT.halfLen + slack;
     this.events.push({ kind: 'land', x, z, inCourt });
+    if (this.tutorial) return;
 
     if (this.phase === 'toss') {
       // dropped the toss without hitting it: no penalty, toss again

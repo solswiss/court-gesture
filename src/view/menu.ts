@@ -17,6 +17,7 @@ export class Menu {
   private beach = new TitleScene();
   private motion = true;
   private lastPhase = '';
+  private returnAfterTutorial = false;
   private screens: HTMLElement[] = [];
   private navigation = document.createElement('nav');
   get paused(): boolean { return this.open && !this.online; }
@@ -42,7 +43,7 @@ export class Menu {
     const backButton = () => button('← Back', back);
     this.play.onclick = () => { this.started = true; this.show(false); };
     this.restart.textContent = 'New match'; this.restart.disabled = client;
-    this.restart.onclick = () => { game.restart(); this.started = true; this.show(false); };
+    this.restart.onclick = () => { this.returnAfterTutorial = false; game.restart(); this.started = true; this.show(false); };
     this.customize = new Customize(appearance, back);
     this.customize.element.classList.add('title-subscreen'); this.customize.element.append(backButton());
     const options = document.createElement('div'); options.className = 'title-subscreen';
@@ -64,12 +65,17 @@ export class Menu {
     const help = document.createElement('p'); help.className = 'menu-help';
     help.textContent = 'Your player follows the ball automatically. Move your hand to aim. Enable the camera after starting, then hold steady to calibrate.';
     const keys = document.createElement('dl'); keys.className = 'title-controls';
-    for (const [action, input] of [['Bump', 'Fist / Q'], ['Set', 'Point up / E'], ['Spike', 'Thumbs up / F'], ['Serve', 'Thumbs up / X, twice'], ['Jump', 'Space'], ['Power', 'Hand size / Shift'], ['Aim', 'Hand offset / mouse / arrows'], ['Menu', 'Escape']]) {
+    for (const [action, input] of [['Bump', 'Fist'], ['Set', 'Point up'], ['Spike', 'Thumbs up'], ['Serve', 'Thumbs up, twice'], ['Power', 'Hand size'], ['Aim', 'Hand offset']]) {
       const term = document.createElement('dt'); term.textContent = action;
       const description = document.createElement('dd'); description.textContent = input; keys.append(term, description);
     }
     controls.append(controlsTitle, help, keys, backButton());
-    this.navigation.append(this.play, button('Customize character', () => this.screen(this.customize.element)), button('Options', () => this.screen(options)), button('How to play', () => this.screen(controls)), this.restart);
+    const tutorial = button('Tutorial', () => {
+      this.returnAfterTutorial = true;
+      game.startTutorial(); this.started = true; this.show(false);
+    });
+    tutorial.disabled = client;
+    this.navigation.append(this.play, tutorial, button('Customize character', () => this.screen(this.customize.element)), button('Options', () => this.screen(options)), button('How to play', () => this.screen(controls)), this.restart);
     this.screens = [this.navigation, this.customize.element, options, controls]; this.screen(this.navigation, false);
     const footer = document.createElement('p'); footer.className = 'title-footer'; footer.textContent = 'SALT AIR. SAND COURT. YOUR NEXT RALLY.';
     const caption = document.createElement('div'); caption.className = 'title-beach-caption'; caption.innerHTML = '<span>WELCOME TO THE COAST</span><p>One more rally.<br>Then we watch the sunset.</p>';
@@ -95,6 +101,8 @@ export class Menu {
   }
   private screen(screen: HTMLElement, focus = true): void {
     for (const element of this.screens) element.hidden = element !== screen;
+    this.overlay.classList.toggle('customizing', screen === this.customize.element);
+    this.overlay.scrollTop = 0;
     if (focus) screen.querySelector<HTMLElement>('input, select, button')?.focus();
   }
   private show(open: boolean): void {
@@ -108,6 +116,13 @@ export class Menu {
     else { (document.activeElement as HTMLElement | null)?.blur(); this.resume(); }
   }
   update(): void {
+    if (this.returnAfterTutorial && !this.game.tutorial) {
+      this.returnAfterTutorial = false;
+      this.started = false;
+      this.lastPhase = this.game.phase;
+      this.show(true);
+      this.subtitle.textContent = 'Tutorial complete! Ready to play?';
+    }
     if (this.open) {
       this.beach.update(performance.now() / 1000, this.game.players[0].color, this.motion);
       this.customize.update();
