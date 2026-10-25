@@ -10,6 +10,8 @@ const GESTURES: Record<string, { label: string; action: HitType | null }> = {
   Thumb_Up: { label: 'Thumbs up', action: 'spike' },
   Pointing_Up: { label: 'Pointing up', action: 'set' },
   Open_Palm: { label: 'Open palm', action: null },
+  // MediaPipe's built-in name for the peace sign is "Victory" (there is no "Peace" category), so the key must match that.
+  Victory: { label: 'Peace', action: 'restart' },
 };
 
 /** Calibrated gesture and shot-aim controller with keyboard fallback. */
@@ -209,6 +211,7 @@ export class HandController implements Controller {
     input.action = this.queued;
     this.queued = null;
     if ((game.phase === 'ready' || game.phase === 'toss') && game.server === player && input.action === 'spike') input.action = 'serve';
+    else if (input.action === 'restart') game.restart();
     if (input.action) this.keyboardAim = false;
     // if (keyboard.action) {
     //   input.action = keyboard.action;

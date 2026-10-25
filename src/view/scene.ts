@@ -8,7 +8,7 @@ import { HIT_SPECS, idealPoint } from '../sim/hit';
 import type { Player } from '../sim/player';
 import type { GameEvent, HitType } from '../types';
 
-const SPEC_COLORS: Record<HitType, number> = { bump: 0x44dd88, set: 0xffdd44, spike: 0xff5544, serve: 0xbb66ff };
+const SPEC_COLORS: Record<HitType, number> = { bump: 0x44dd88, set: 0xffdd44, spike: 0xff5544, serve: 0xbb66ff, restart: 0xffffff };
 const PLAYER_COLORS = { 1: 0xfa5a50, [-1]: 0x3fbfff } as const;
 
 function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {

@@ -21,7 +21,6 @@ export class Hud {
   private help: HTMLElement;
   private hitTimer = 0;
   private last = { score: '', status: '', touches: '' };
-  private restart;
 
   constructor(parent: HTMLElement, private game: Game) {
     const root = el('hud', parent);
@@ -39,13 +38,9 @@ export class Hud {
     this.dbg = el('hud-debug', root);
     this.help = el('hud-help', root);
     this.help.innerHTML = [
-      '<ul><li>aim [hand offset]</li><li>power [hand size]</li><li>bump [fist]</li><li>set [point up]</li><li>spike [thumbs up]</li><li>serve [spike+nt+spike]</li><li>neutral [palm]</li><li>menu [Esc]</li></ul>'
+      '<ul><li>aim [hand offset]</li><li>power [hand size]</li><li>bump [fist]</li><li>set [point up]</li><li>spike [thumbs up]</li><li>serve [spike+nt+spike]</li><li>neutral [palm]</li>'
     ].join('<br>');
     this.dbg.style.display = 'none';
-    this.restart = document.createElement('button');
-    this.restart.className = 'menu-restart'; this.restart.textContent = 'Restart';
-    this.restart.onclick = () => { game.restart(); };
-    root.appendChild(this.restart);
   }
 
   onEvent(ev: GameEvent): void {

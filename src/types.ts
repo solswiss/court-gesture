@@ -1,5 +1,5 @@
 export type Side = 1 | -1; // +1 = near court (z > 0, toward camera), -1 = far court
-export type HitType = 'bump' | 'set' | 'spike' | 'serve';
+export type HitType = 'bump' | 'set' | 'spike' | 'serve' | 'restart';
 export type Phase = 'ready' | 'toss' | 'rally' | 'point' | 'over';
 
 export interface Vec3 {

@@ -41,7 +41,7 @@ window.addEventListener('keydown', (e) => {
     world.debug = !world.debug;
     hud.setDebug(world.debug);
   }
-  if (!room.isClient && e.code === 'Enter' && game.phase === 'over') game.restart();
+  if (!room.isClient && e.code === 'KeyR' && !e.repeat) game.restart(); // && game.phase === 'over'
 });
 
 let last = performance.now();

@@ -5,10 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sand Volley</title>
     <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd3ff; font-family: system-ui, sans-serif; }
+      @font-face {
+        font-family: 'RiiCookie';
+        src: url('/RiiCookieRt.otf') format('opentype');
+
+      }
+      
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd3ff; font-family: 'RiiCookie', system-ui, sans-serif; }
+      * {
+        font-family: 'RiiCookie';
+      }
       #app { position: fixed; inset: 0; }
       canvas { display: block; width: 100%; height: 100%; }
-      .hud { position: absolute; inset: 0; pointer-events: none; color: #fff; width: 100vw; }
+      .hud { position: absolute; inset: 0; pointer-events: none; color: #fff; width: 100vw;}
       .hud-top {
         display: flex;
         flex-direction: column;
@@ -30,7 +39,6 @@
         display: flex;
         flex-direction: row;
         width: 24em;
-        font-weight: 600; 
         color: #fff;
         text-shadow: 
             -1px -1px 0 #000,  
@@ -60,7 +68,7 @@
         padding: 8px;
       }
       .hud-touches { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); font-size: 14px; opacity: .9; }
-      .hud-hit { position: absolute; bottom: 24%; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 900; opacity: 0; transition: opacity .25s; }
+      .hud-hit { position: absolute; bottom: 24%; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 600; opacity: 0; transition: opacity .25s; }
       .hud-hit.show { opacity: 1; }
       .hud-hit.q3 { color: #ffee55; } .hud-hit.q2 { color: #fff; } .hud-hit.q1 { color: #ffc27a; } .hud-hit.q0 { color: #ff7766; }
       .hud-debug { position: absolute; top: 80px; left: 12px; font: 12px/1.4 ui-monospace, monospace; background: rgba(0,0,0,.45); padding: 6px 8px; border-radius: 6px; }
@@ -69,8 +77,9 @@
           list-style: none;
           text-align: start;
           font-size: 14px;
-          font-weight: bold; 
           color: #fff;
+          padding: 0;
+          margin: 0;
           text-shadow: 
             -1px -1px 0 #000,  
             1px -1px 0 #000,
@@ -131,7 +140,10 @@
       .network-panel input[readonly] { width: 100%; }
       .network-panel[hidden], .network-panel [hidden] { display: none; }
       .network-panel button, .network-panel input { padding: 6px; border-radius: 4px; border: 0; }
-      .hand-panel { position: absolute; z-index: 5; right: 12px; top: 12px; width: min(270px, 42vw); box-sizing: border-box; padding: 12px; border-radius: 12px; background: transparent; color: #183849; font-family: system-ui, sans-serif; font-size: 14px; font-weight: bold; line-height: 1.6; display: grid; gap: 8px; }
+      .hand-panel { position: absolute; z-index: 5; right: 12px; top: 12px; width: min(270px, 42vw); box-sizing: border-box; padding: 12px; border-radius: 12px; background: transparent; color: #183849; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.6; display: grid; gap: 8px; 
+        background: linear-gradient(#ffffff55, #ffffffff);
+        border-radius: 8px;
+        border: 2px solid #fff;}
       .hand-button-panel {
         display: flex;
         flex-direction: row;
