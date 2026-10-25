@@ -29,11 +29,10 @@ export class Menu {
     const dialog = document.createElement('section'); dialog.className = 'title-menu';
     dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true');
     this.title.id = 'game-menu-title'; dialog.setAttribute('aria-labelledby', this.title.id);
-    const eyebrow = document.createElement('p'); eyebrow.className = 'title-eyebrow'; eyebrow.textContent = 'A LITTLE SUN. A LITTLE COMPETITION.';
     this.title.className = 'title-wordmark'; this.title.innerHTML = 'COURT<span>GESTURE</span>';
     this.subtitle.className = 'title-subtitle';
     const rule = document.createElement('div'); rule.className = 'title-rule'; rule.setAttribute('aria-hidden', 'true');
-    const heading = document.createElement('header'); heading.append(eyebrow, this.title, rule, this.subtitle);
+    const heading = document.createElement('header'); heading.append(this.title, rule, this.subtitle);
     this.navigation.setAttribute('aria-label', 'Game menu'); this.navigation.className = 'title-navigation';
     this.toggle.className = 'menu-toggle'; this.toggle.textContent = 'Menu'; this.toggle.onclick = () => this.show(!this.open);
     const button = (name: string, action: () => void) => {
@@ -77,10 +76,9 @@ export class Menu {
     tutorial.disabled = client;
     this.navigation.append(this.play, tutorial, button('Customize character', () => this.screen(this.customize.element)), button('Options', () => this.screen(options)), button('How to play', () => this.screen(controls)), this.restart);
     this.screens = [this.navigation, this.customize.element, options, controls]; this.screen(this.navigation, false);
-    const footer = document.createElement('p'); footer.className = 'title-footer'; footer.textContent = 'SALT AIR. SAND COURT. YOUR NEXT RALLY.';
-    const caption = document.createElement('div'); caption.className = 'title-beach-caption'; caption.innerHTML = '<span>WELCOME TO THE COAST</span><p>One more rally.<br>Then we watch the sunset.</p>';
+    const footer = document.createElement('p'); footer.className = 'title-footer'; footer.textContent = 'Made in 24 hours for HowdyHack 2026!';
     dialog.append(heading, this.navigation, this.customize.element, options, controls, footer);
-    this.overlay.append(this.beach.element, caption, dialog); parent.append(this.toggle, this.overlay);
+    this.overlay.append(this.beach.element, dialog); parent.append(this.toggle, this.overlay);
     window.addEventListener('keydown', event => {
       if (event.code === 'Tab' && this.open) {
         const controls = [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled)')].filter(el => !el.closest('[hidden]'));
@@ -109,7 +107,6 @@ export class Menu {
     this.open = open; this.overlay.hidden = !open;
     this.overlay.parentElement?.classList.toggle('menu-open', open);
     this.toggle.setAttribute('aria-expanded', String(open));
-    this.subtitle.textContent = this.online ? 'Your online match continues.' : this.started ? 'Take a breath. The beach can wait.' : 'Beach volleyball, at your own pace.';
     this.play.textContent = this.started || this.online ? 'Continue match' : 'Play';
     this.restart.hidden = !this.started && !this.online;
     if (open) { this.screen(this.navigation); this.play.focus(); }
