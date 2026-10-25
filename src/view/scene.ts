@@ -98,7 +98,8 @@ class PlayerView {
   private legs: THREE.Mesh[] = [];
   private walkTime = 0;
 
-  constructor(private player: Player, color: number) {
+  constructor(private player: Player) {
+    const color: string = `#${player.color.toString(16).padStart(6, '0')}`;
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.25, 0.27, 4, 12),
       new THREE.MeshLambertMaterial({ color }),
@@ -180,6 +181,7 @@ export class World3D {
   private serveImpactLife = 0;
   private impactHoldUntil = 0;
   private impactNeedsFrame = false;
+  private lastTouchedBy = 0;
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private debugGroup = new THREE.Group();
   private reachSpheres: Partial<Record<HitType, THREE.Mesh>> = {};
@@ -236,26 +238,49 @@ export class World3D {
     }
     // Palm tree on the sand outside the right sideline.
     const palmHeight = 5.5;
-    const palmTexture = new THREE.TextureLoader().load('/palm-tree.png', (texture) => {
-      palm.scale.set(palmHeight * texture.image.width / texture.image.height, palmHeight, 1);
-    });
-    palmTexture.colorSpace = THREE.SRGBColorSpace;
-    const palm = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: palmTexture,
-      transparent: true,
-      depthWrite: false,
-    }));
-    palm.center.set(0.5, 0);
-    palm.position.set(COURT.halfW + 3.5, 0.02, 1);
-    palm.scale.set(palmHeight, palmHeight, 1);
-    palm.renderOrder = 1;
-    this.scene.add(palm);
-
+    for (let i=0; i<3; ++i) {
+      const palmTexture = new THREE.TextureLoader().load('/palm-tree.png', (texture) => {
+        palm.scale.set(palmHeight * texture.image.width / texture.image.height, palmHeight, 1);
+      });
+      palmTexture.colorSpace = THREE.SRGBColorSpace;
+      const palm = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: palmTexture,
+        transparent: true,
+        depthWrite: false,
+      }));
+      palm.center.set(0.5, 0);
+      palm.position.set(COURT.halfW + 7-i*2, -5+3*i, 1);
+      palm.scale.set(palmHeight, palmHeight, 1);
+      palm.renderOrder = 3-i;
+      this.scene.add(palm);
+    }
+    for (let i=0; i<3; ++i) {
+      const palmTexture = new THREE.TextureLoader().load('/palm-tree.png', (texture) => {
+        // Set horizontal wrapping to repeat so mirroring behaves nicely
+        texture.wrapS = THREE.RepeatWrapping;
+        
+        // HIGHLIGHT: Invert the horizontal repeat axis and offset it to flip the texture
+        texture.repeat.x = -1;
+        texture.offset.x = 1; 
+        palm.scale.set(palmHeight * texture.image.width / texture.image.height, palmHeight, 1);
+      });
+      palmTexture.colorSpace = THREE.SRGBColorSpace;
+      const palm = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: palmTexture,
+        transparent: true,
+        depthWrite: false,
+      }));
+      palm.center.set(0.5, 0);
+      palm.position.set(COURT.halfW - (15-i*2), -5+3*i, 1);
+      palm.scale.set(palmHeight, palmHeight, 1);
+      palm.renderOrder = 3-i;
+      this.scene.add(palm);
+    }
     this.net = this.buildNet();
     this.scene.add(this.net); 
 
     // players
-    this.views = game.players.map((p) => new PlayerView(p, p.side === 1 ? 0xfa5a50 : 0x3fbfff));
+    this.views = game.players.map((p) => new PlayerView(p));
     for (const v of this.views) this.scene.add(v.group, v.shadow);
 
     // Camera-facing artwork; the simulation still uses BALL.radius for collisions.
@@ -297,7 +322,8 @@ export class World3D {
         if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
       }
       c.closePath();
-      c.fillStyle = '#fff4bd';
+      const hexString: string = `#${this.game.players[this.lastTouchedBy].color.toString(16).padStart(6, '0')}`;
+      c.fillStyle = hexString;
       c.fill();
     });
     this.serveImpact = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -512,6 +538,7 @@ export class World3D {
         this.serveImpact.position.set(b.x, b.y, b.z);
         this.serveImpactLife = 0.12;
         this.impactNeedsFrame = ev.type === 'serve'; // Spike hitstop is handled by the main loop.
+        this.lastTouchedBy = ev.player;
       }
     }
   }

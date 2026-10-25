@@ -26,6 +26,7 @@ export class Player {
   constructor(
     readonly id: number,
     readonly side: Side,
+    readonly color: number
   ) {}
 
   get actor(): Actor {

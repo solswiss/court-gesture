@@ -42,7 +42,7 @@ export class Game {
     seed = 1,
   ) {
     this.rng = makeRng(seed);
-    this.players = [new Player(0, 1), new Player(1, -1)];
+    this.players = [new Player(0, 1, 0xffaa00), new Player(1, -1, 0x00aaff)];
     this.server = this.players[0];
     this.resetForServe(true);
   }
