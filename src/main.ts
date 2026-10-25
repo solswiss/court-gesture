@@ -30,21 +30,37 @@ window.addEventListener('keydown', (e) => {
 
 let last = performance.now();
 let acc = 0;
+const SPIKE_HITSTOP_MS = 50;
+let pauseUntil = 0;
 function frame(now: number): void {
-  const dt = Math.min(0.1, (now - last) / 1000);
+  // Exclude hitstop time so the simulation never catches up through the pause.
+  const dt = Math.min(0.1, Math.max(0, now - Math.max(last, pauseUntil)) / 1000);
   last = now;
+  if (now < pauseUntil) {
+    requestAnimationFrame(frame);
+    return;
+  }
   acc += dt;
+  let hitstop = false;
   // fixed-step sim (120 Hz) decoupled from render rate
   while (acc >= SIM_DT) {
     game.update(SIM_DT);
     acc -= SIM_DT;
+    // Handle contact immediately, before another simulation step moves the ball.
+    for (const ev of game.drainEvents()) {
+      hud.onEvent(ev);
+      world.onEvent(ev);
+      if (ev.kind === 'hit' && ev.type === 'spike') hitstop = true;
+    }
+    if (hitstop) {
+      pauseUntil = performance.now() + SPIKE_HITSTOP_MS;
+      acc = 0;
+      break;
+    }
   }
-  for (const ev of game.drainEvents()) {
-    hud.onEvent(ev);
-    world.onEvent(ev);
-  }
-  hud.update(game, dt);
-  world.update(dt, now / 1000);
+  // Draw the contact frame once, then freeze visuals and timers together.
+  hud.update(game, hitstop ? 0 : dt);
+  world.update(hitstop ? 0 : dt, now / 1000);
   world.render();
   requestAnimationFrame(frame);
 }
