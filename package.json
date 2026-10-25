@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "homepage": "https://solswiss.github.io",
+  "homepage": "https://github.io",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
