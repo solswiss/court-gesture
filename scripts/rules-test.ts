@@ -322,5 +322,60 @@ function fly(from: Vec3, vel: Vec3): { net: boolean; land: { x: number; z: numbe
   }
 }
 
+{
+  let action: HitType | null = null;
+  const human = new Scripted((_g, input) => { input.action = action; action = null; });
+  const g = new Game([human, new Idle()], 1, true);
+  const practice = (move: HitType) => { action = move; g.update(SIM_DT); };
+  practice('spike');
+  check('tutorial ignores out-of-order moves', g.tutorial?.count === 0 && g.tutorial.step === 0);
+  const startZ = g.ball.pos.z;
+  g.update(SIM_DT);
+  check('bump feed flies from the opposite court toward the player', startZ < 0 && g.ball.mode === 'live' && g.ball.pos.z > startZ);
+  practice('bump');
+  check('gesture outside ball reach does not count', g.tutorial?.count === 0);
+  g.startTutorial();
+  let sawLanding = false;
+  let sawRefeed = false;
+  for (let i = 0; i < 480; i++) {
+    g.update(SIM_DT);
+    if (g.ball.mode === 'dead') sawLanding = true;
+    if (sawLanding && g.ball.mode === 'live') { sawRefeed = true; break; }
+  }
+  check('missed balls are fed again without progress or points', sawRefeed && g.tutorial?.count === 0 && g.scores.every(s => s === 0));
+  let contacts = 0;
+  let previousSerial = g.hitSerial;
+  for (let i = 0; i < 120 * 90 && g.tutorial; i++) {
+    const move = g.tutorialMoves[g.tutorial.step];
+    const ideal = idealPoint(g.players[0].actor, HIT_SPECS[move]);
+    if (g.ball.mode === 'held') {
+      const heldY = g.ball.pos.y;
+      for (let j = 0; j < 120; j++) g.update(SIM_DT);
+      check(`${move} ball waits for gesture`, g.ball.mode === 'held' && g.ball.pos.y === heldY);
+      practice('bump');
+      check(`${move} ignores wrong release gesture`, g.ball.mode === 'held');
+      action = move;
+    }
+    // Trigger one gesture when a falling feed reaches the intended contact height.
+    if (g.ball.vel.y < 0 && Math.abs(g.ball.pos.y - ideal.y) < 0.15 && g.touchCount === 0) action = move;
+    g.update(SIM_DT);
+    if (g.hitSerial !== previousSerial) {
+      contacts++;
+      previousSerial = g.hitSerial;
+      const events = g.drainEvents();
+      check(`practice contact ${contacts} emits hit feedback`, events.some(e => e.kind === 'hit' && e.type === move));
+      if (move === 'bump') check('bump feed clears the net', !events.some(e => e.kind === 'net'));
+    }
+  }
+  check('tutorial requires twelve actual ball contacts', contacts === 12);
+  check('practice ends at a fresh serve with no points', g.tutorial === null && g.phase === 'ready' && g.scores.every(s => s === 0));
+  g.restart();
+  check('restart starts a match without tutorial', g.tutorial === null && g.phase === 'ready');
+  g.startTutorial();
+  check('tutorial can be replayed explicitly', g.tutorial?.step === 0 && g.tutorial.count === 0);
+  g.restart();
+  check('restart exits an active tutorial', g.tutorial === null && g.phase === 'ready' && g.ball.mode === 'held');
+}
+
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll rule checks passed');
 process.exit(failed ? 1 : 0);
