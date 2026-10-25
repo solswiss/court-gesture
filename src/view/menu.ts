@@ -26,6 +26,7 @@ export class Menu {
     this.title.id = 'game-menu-title'; dialog.setAttribute('aria-labelledby', this.title.id);
     this.toggle.className = 'menu-toggle'; this.toggle.textContent = 'Menu';
     this.toggle.onclick = () => this.show(!this.open);
+    this.restart.className = 'menu-restart'; this.restart.textContent = 'Restart'
     const select = document.createElement('select');
     select.setAttribute('aria-label', 'CPU difficulty');
     for (const level of ['easy', 'normal', 'hard'] as const) {

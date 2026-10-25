@@ -65,6 +65,7 @@ export class Game {
   }
 
   restart(): void {
+    console.debug('restarting')
     this.scores = [0, 0];
     this.winner = null;
     this.lastPointWinner = null;

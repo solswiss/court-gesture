@@ -3,7 +3,6 @@ import type { Controller, Game } from '../sim/game';
 import type { Player } from '../sim/player';
 import { emptyInput, type Aim, type HitType, type PlayerInput } from '../types';
 import { clamp } from '../util';
-import { HumanController } from './keyboard';
 import { autoLateral, autoDepth, AimHistory, handAxis, OneEuroFilter } from './hand-signal';
 
 const GESTURES: Record<string, { label: string; action: HitType | null }> = {
