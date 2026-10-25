@@ -15,10 +15,6 @@ export class Player {
   vz = 0;
   vy = 0;
   grounded = true;
-  diveTime = 0;
-  diveCooldown = 0;
-  private diveX = 0;
-  private diveZ = 0;
   /** An armed action waiting for the ball to get in reach (cleared on hit or after actionWindow). */
   pending: PendingAction | null = null;
   prevContactDist = Infinity;
@@ -45,7 +41,6 @@ export class Player {
     this.y = 0;
     this.vy = 0;
     this.grounded = true;
-    this.diveTime = this.diveCooldown = 0;
   }
 
   /** minDepth: closest allowed distance to the net (bigger while serving: stay behind the end line). */
@@ -58,27 +53,16 @@ export class Player {
       mx /= mag;
       mf /= mag;
     }
-    this.diveTime = Math.max(0, this.diveTime - dt);
-    this.diveCooldown = Math.max(0, this.diveCooldown - dt);
-    if (input.dive && this.grounded && this.diveCooldown === 0) {
-      this.diveTime = 0.3;
-      this.diveCooldown = 1.2;
-      const direction = Math.hypot(mx, mf) || 1;
-      this.diveX = mx / direction;
-      this.diveZ = -this.side * (mag > 0 ? mf / direction : 1);
-    }
-    const recovery = this.diveCooldown > 0.65 && this.diveTime === 0 ? 0.45 : 1;
-    const tx = mx * PLAYER.speed * recovery;
-    const tz = -this.side * mf * PLAYER.speed * recovery; // "forward" = toward the net
+    const tx = mx * PLAYER.speed;
+    const tz = -this.side * mf * PLAYER.speed; // "forward" = toward the net
     const acc = (this.grounded ? PLAYER.accel : PLAYER.accel * PLAYER.airAccelMul) * dt;
     this.vx = approach(this.vx, tx, acc);
     this.vz = approach(this.vz, tz, acc);
-    if (this.diveTime > 0) { this.vx = this.diveX * 10; this.vz = this.diveZ * 10; }
     this.pos.x += this.vx * dt;
     this.pos.z += this.vz * dt;
 
     // --- jump ---
-    if (input.jump && this.grounded && this.diveCooldown === 0) {
+    if (input.jump && this.grounded) {
       this.vy = PLAYER.jumpV;
       this.grounded = false;
     }

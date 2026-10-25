@@ -130,7 +130,6 @@ export class PlayerView {
     const p = this.player;
     this.bodyMaterial.color.setHex(p.color);
     this.group.position.set(p.pos.x, p.y, p.pos.z);
-    this.group.rotation.x = p.diveTime > 0 ? -1.1 * Math.sin(Math.PI * p.diveTime / 0.3) : 0;
     const progress = 1 - THREE.MathUtils.clamp(p.swing / 0.28, 0, 1);
     const weight = p.swing > 0 ? 1 - THREE.MathUtils.smoothstep(progress, 0.65, 1) : 0;
     for (const animatedHand of this.hands) {
