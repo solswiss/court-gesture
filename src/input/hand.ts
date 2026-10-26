@@ -93,7 +93,7 @@ export class HandController implements Controller {
       this.scan();
     } catch (error) {
       this.stop();
-      this.status.textContent = `Camera unavailable: ${error instanceof Error ? error.message : String(error)} Keyboard controls still work. Try enabling again.`;
+      this.status.textContent = `Camera unavailable: ${error instanceof Error ? error.message : String(error)} Try enabling again.`;
     } finally {
       this.button.disabled = false;
     }

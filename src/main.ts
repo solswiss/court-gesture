@@ -37,10 +37,10 @@ const menu = new Menu(app, game, room.online, room.isClient, skill, level => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLElement && (e.target.isContentEditable || e.target.closest('input, textarea, select, button'))) return;
-  if (e.code === 'Backquote') {
-    world.debug = !world.debug;
-    hud.setDebug(world.debug);
-  }
+  // if (e.code === 'Backquote') {
+  //   world.debug = !world.debug;
+  //   hud.setDebug(world.debug);
+  // }
   if (!room.isClient && e.code === 'KeyR' && !e.repeat) game.restart(); // && game.phase === 'over'
 });
 

@@ -11,6 +11,12 @@ import type { GameEvent, HitType } from '../types';
 const SPEC_COLORS: Record<HitType, number> = { bump: 0x44dd88, set: 0xffdd44, spike: 0xff5544, serve: 0xbb66ff, restart: 0xffffff };
 const PLAYER_COLORS = { 1: 0xfa5a50, [-1]: 0x3fbfff } as const;
 
+// Ocean sprite sheet (in public/): a horizontal strip of equally sized frames; the height is read from the image.
+const WATER_SHEET = 'ocean-texture-sheet.png';
+const WATER_FRAMES = 4;
+const WATER_FRAME_WIDTH = 32; // px per frame
+const WATER_FPS = 3; // fixed animation speed
+
 function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = w;
@@ -196,6 +202,9 @@ export class World3D {
   private ballTrail: BallTrail;
   private ballShadow = blobShadow();
   private waterFallback?: THREE.CanvasTexture;
+  private waterMaterial?: THREE.MeshBasicMaterial;
+  private waterFrames: THREE.CanvasTexture[] = [];
+  private waterFrame = -1;
   private berts: BertFish[];
   private net: THREE.Group;
   private netMaterials: THREE.Material[] = [];
@@ -225,8 +234,8 @@ export class World3D {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     parent.appendChild(this.renderer.domElement);
 
-    this.scene.background = new THREE.Color(0x9fd3ff);
-    this.scene.fog = new THREE.Fog(0x9fd3ff, 40, 110);
+    this.scene.background = new THREE.Color(0x66dff0);
+    this.scene.fog = new THREE.Fog(0x66dff0, 40, 110);
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 250);
 
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0xd8b98a, 1.05));
@@ -392,37 +401,28 @@ export class World3D {
       depthWrite: false,
     });
 
-    const video = document.createElement('video');
-    video.muted = true;
-    video.defaultMuted = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.autoplay = true;
-    video.preload = 'auto';
-
-    const waterTexture = new THREE.VideoTexture(video);
-    waterTexture.colorSpace = THREE.SRGBColorSpace;
-    waterTexture.wrapS = waterTexture.wrapT = THREE.RepeatWrapping;
-    waterTexture.repeat.set(60, 60);
-    video.addEventListener('playing', () => {
-      waterMaterial.map = waterTexture;
-      waterMaterial.needsUpdate = true;
-    });
-    video.addEventListener('error', () => {
-      waterMaterial.map = fallback;
-      waterMaterial.needsUpdate = true;
-      console.warn('Water video could not be decoded; using animated water fallback.', video.error);
-    });
-    const tryPlay = () => {
-      if (video.paused && !video.error) void video.play().catch(() => {
-        // The animated fallback remains visible until playback is allowed.
-      });
-    };
-    window.addEventListener('pointerdown', tryPlay);
-    window.addEventListener('keydown', tryPlay);
-    video.src = `${import.meta.env.BASE_URL}wateranim1.mp4`;
-    video.load();
-    tryPlay();
+    // Ocean sprite sheet: FRAMES tiles in a horizontal strip, each one a seamless tile. The animation is made by swapping
+    // which frame the water uses (see update()); the tiles themselves never scroll or move.
+    // Each frame is cut into its own texture so it can repeat across the plane (a repeat can't wrap inside part of a sheet).
+    this.waterMaterial = waterMaterial;
+    new THREE.TextureLoader().load(
+      `${import.meta.env.BASE_URL}${WATER_SHEET}`,
+      (sheet) => {
+        const image = sheet.image as HTMLImageElement;
+        sheet.dispose(); // Only needed to cut the frames out of it.
+        for (let i = 0; i < WATER_FRAMES; i++) {
+          const frame = canvasTex(WATER_FRAME_WIDTH, image.height, (ctx) => {
+            ctx.drawImage(image, i * WATER_FRAME_WIDTH, 0, WATER_FRAME_WIDTH, image.height, 0, 0, WATER_FRAME_WIDTH, image.height);
+          });
+          frame.wrapS = frame.wrapT = THREE.RepeatWrapping;
+          frame.repeat.set(60, 60);
+          this.waterFrames.push(frame);
+        }
+      },
+      undefined,
+      // The procedural water above stays visible if the sheet is missing.
+      (error) => console.warn('Ocean sprite sheet could not be loaded; using the fallback water.', error),
+    );
 
     const sandMargin = 2.5;
     const shorelineZ = -COURT.halfLen - sandMargin;
@@ -607,7 +607,14 @@ export class World3D {
 
   update(dt: number, t: number): void {
     for (const bert of this.berts) bert.update(dt);
-    this.waterFallback?.offset.set(t * 0.015, Math.sin(t * 0.2) * 0.025);
+    // Ocean animation: pick the frame from the clock at a constant rate. Only the frame changes; nothing scrolls.
+    if (this.waterMaterial && this.waterFrames.length === WATER_FRAMES) {
+      const frame = Math.floor(t * WATER_FPS) % WATER_FRAMES;
+      if (frame !== this.waterFrame) {
+        this.waterFrame = frame;
+        this.waterMaterial.map = this.waterFrames[frame];
+      }
+    }
     const g = this.game;
     const human = g.players[g.viewPlayerId];
 

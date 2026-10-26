@@ -28,7 +28,7 @@ export class Menu {
     const dialog = document.createElement('section'); dialog.className = 'title-menu';
     dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true');
     this.title.id = 'game-menu-title'; dialog.setAttribute('aria-labelledby', this.title.id);
-    this.title.className = 'title-wordmark'; this.title.innerHTML = 'COURT<span>GESTURE</span>';
+    this.title.className = 'title-wordmark'; this.title.innerHTML = 'COURT GESTURE';
     const heading = document.createElement('header'); heading.append(this.title);
     this.navigation.setAttribute('aria-label', 'Game menu'); this.navigation.className = 'title-navigation';
     this.toggle.className = 'menu-toggle'; this.toggle.textContent = 'Menu'; this.toggle.onclick = () => this.show(!this.open);

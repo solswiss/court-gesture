@@ -1,0 +1,11 @@
+- [ ] dive
+- [ ] better set gesture
+- [ ] sfx
+- [ ] improve/clarify instructions
+- [ ] CPU 2v2
+- [ ] multiplayer 2v2
+- [ ] better lighting in game
+- [ ] remove ocean palm tree in title
+- [ ] win/lose screen, some kind of acknowledgement
+- [ ] fix console errors
+- [ ] add images for gestures
